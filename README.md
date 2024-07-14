@@ -4,7 +4,7 @@ A Visual Studio Code extension that shows all the function calls (code paths) th
 
 ## Features
 
-![Show the call path](./.docs/images/basic_example.webm)
+![Show the call path](./.docs/images/basic_example.gif)
 
 > Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
 
