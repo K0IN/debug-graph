@@ -1,13 +1,19 @@
 {
   "name": "call-graph",
   "displayName": "call-graph",
-  "description": "",
+  "description": "A Visual Studio Code extension that shows all the function calls (code paths) that lead to a breakpoint.",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/K0IN/stacktrace-history/"
+  },
   "engines": {
     "vscode": "^1.91.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Debuggers",
+    "Visualization"
   ],
   "activationEvents": [
     "onStartupFinished"

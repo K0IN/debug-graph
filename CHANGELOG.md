@@ -1,9 +1,13 @@
 # Change Log
 
-All notable changes to the "call-graph" extension will be documented in this file.
+<!-- Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file. -->
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [0.0.1] - 2024-07-14
 
-## [Unreleased]
+### Added
 
-- Initial release
+- Basic functionality (Show call history for a breakpoint in python code)
+- Editor uses the same theme as the rest of the IDE
+- Auto update the graph on debugger events
+- Show the graph in a separate window
+- Button to open graph in document header
