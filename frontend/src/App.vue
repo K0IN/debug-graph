@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { VscodeMessage, StackTraceInfo } from "./types";
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
 import { Range } from 'monaco-editor/esm/vs/editor/editor.api'
 import { useMonaco } from '@guolao/vue-monaco-editor';
@@ -16,7 +16,8 @@ window.onmessage = async (event: MessageEvent<VscodeMessage>) => {
   const message = event.data;
   if (message.type === "stackTrace") {
     stacktrace.value = []; // remove all previous stack traces elements
-    setTimeout(() => { stacktrace.value = message.data; }, 10); // add new stack traces elements
+    await nextTick();
+    stacktrace.value = message.data; // add new stack traces elements
   } else if (message.type === "theme") {
     theme = message.data; // set the theme
   } else {
@@ -31,7 +32,7 @@ const MONACO_EDITOR_OPTIONS = {
   scrollbar: { vertical: "hidden", horizontal: "auto" },
   automaticLayout: true,
   scrollBeyondLastLine: false,
-  stickyScrolling: true,
+  stickyScrolling: false,
 } as editor.IEditorOptions;
 
 const openFile = (file: string, line: number) => vscode.postMessage({ type: "openFile", data: { file, line, } } as VscodeMessage);
@@ -55,11 +56,6 @@ const addEditorAndSetupHighlights = (edit: editor.IStandaloneCodeEditor, index: 
     }
   ]);
 
-  setTimeout(() => {
-    const size = edit.getScrollHeight();
-    edit.layout({ width: 100, height: size });
-  }, 10);
-
   // monacoRef.value?.languages.registerHoverProvider('python', {
   //   provideHover(model, position, token, context) {
   //     return {
@@ -73,22 +69,27 @@ const addEditorAndSetupHighlights = (edit: editor.IStandaloneCodeEditor, index: 
     monacoRef.value?.editor.defineTheme(themeName, theme as editor.IStandaloneThemeData);
     monacoRef.value?.editor.setTheme(themeName);
   }
+
+  setTimeout(() => {
+    const size = edit.getScrollHeight();
+    edit.layout({ width: 100, height: size });
+    edit.layout(); // Ensure the editor is refreshed
+  }, 10);
 };
-
-
+// todo disable scrolling on the editor
 </script>
 
 <template>
   <div class="list">
     <vscode-panel-view class="frame-container"
-      v-for="traceFrame in stacktrace.map((traceFrame, index) => ({ traceFrame, index }))" :key="traceFrame.index">
+      v-for="traceFrame in stacktrace.map((traceFrame, index) => ({ traceFrame, index }))"
+      :key="traceFrame.traceFrame.code + traceFrame.traceFrame.file + traceFrame.traceFrame.location.startLine">
       <vscode-link style="grid-area: path" class="title-element" :href="traceFrame.traceFrame.file"
         @click="() => openFile(traceFrame.traceFrame.file, 1)">
         {{ traceFrame.traceFrame.file }}
       </vscode-link>
-
-      <vue-monaco-editor style="grid-area: code" v-model:value="traceFrame.traceFrame.code" theme="vs-dark"
-        :options="MONACO_EDITOR_OPTIONS" :language="traceFrame.traceFrame.language"
+      <vue-monaco-editor style="grid-area: code" class="no-scroll" v-model:value="traceFrame.traceFrame.code"
+        theme="vs-dark" :options="MONACO_EDITOR_OPTIONS" :language="traceFrame.traceFrame.language"
         @mount="(editor: any) => addEditorAndSetupHighlights(editor, traceFrame.index)" />
     </vscode-panel-view>
   </div>
@@ -102,11 +103,14 @@ const addEditorAndSetupHighlights = (edit: editor.IStandaloneCodeEditor, index: 
   justify-content: center;
   overflow: auto;
   gap: 1em;
+  padding: 1px;
 }
 
 .frame-container {
   display: grid;
   width: 100%;
+  outline: 1px solid var(--vscode-panel-border);
+  gap: 6px;
   grid-template-areas:
     "path path path"
     "code code code";
@@ -115,7 +119,6 @@ const addEditorAndSetupHighlights = (edit: editor.IStandaloneCodeEditor, index: 
 }
 
 .title-element {
-  padding: 0.5em;
   align-items: baseline;
 }
 </style>
