@@ -1,12 +1,11 @@
-import { commands, debug, ExtensionContext, Selection, TextEditorRevealType, Uri, ViewColumn, Webview, WebviewPanel, window, workspace } from 'vscode';
+import { commands, debug, ExtensionContext, Selection, TextEditorRevealType, Uri, Webview, WebviewPanel, window, workspace } from 'vscode';
 import { getStacktraceInfo } from './callstack-extractor';
-import path from "path";
-import { getUri, getNonce } from './webview/helper';
-import { VscodeMessage } from './types';
+import { ComlinkBackendApi, ComlinkFrontendApi } from 'shared/src/index';
 import { getMonacoTheme } from './webview/themes';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
-
-
+// https://github.com/GoogleChromeLabs/comlink
+import * as Comlink from "comlink/dist/esm/comlink";
+import { getComlinkChannel } from './webview/messaging';
 
 async function showFile(path: string, line: number) {
   const uri = Uri.from({ scheme: 'file', path });
@@ -21,33 +20,31 @@ async function showFile(path: string, line: number) {
   }
 }
 
-async function updateViewWithStackTrace(panel: Webview) {
+async function updateViewWithStackTrace(webview: Webview, context: ExtensionContext) {
   const result = await getStacktraceInfo();
-  const vscodeMessage: VscodeMessage = { type: 'stackTrace', data: result };
-  await panel.postMessage(vscodeMessage);
+  const remoteFunction = Comlink.wrap<ComlinkFrontendApi>(getComlinkChannel(webview, context));
+  await remoteFunction.setStackTrace(result);
 }
-
 
 export async function activate(context: ExtensionContext) {
   let currentPanel: WebviewPanel | undefined = undefined;
-
   // started debug session
   context.subscriptions.push(debug.onDidStartDebugSession(async (e) => {
     if (currentPanel?.webview) {
-      await updateViewWithStackTrace(currentPanel.webview);
+      await updateViewWithStackTrace(currentPanel.webview, context);
     }
   }));
 
   // step into, step out, step over, change active stack item, change active debug session, receive custom event
   context.subscriptions.push(debug.onDidChangeActiveStackItem(async (e) => {
     if (currentPanel?.webview) {
-      await updateViewWithStackTrace(currentPanel.webview);
+      await updateViewWithStackTrace(currentPanel.webview, context);
     }
   }));
 
   context.subscriptions.push(debug.onDidChangeActiveDebugSession(async (e) => {
     if (currentPanel?.webview) {
-      await updateViewWithStackTrace(currentPanel.webview);
+      await updateViewWithStackTrace(currentPanel.webview, context);
     }
   }));
 
@@ -61,8 +58,13 @@ export async function activate(context: ExtensionContext) {
 
   workspace.onDidChangeConfiguration(async event => {
     if (event.affectsConfiguration('workbench.colorTheme') && currentPanel?.webview) {
-      const themeJson = await getMonacoTheme().catch(() => undefined);
-      await currentPanel?.webview?.postMessage({ type: 'theme', data: themeJson } as VscodeMessage);
+      const { setTheme } = Comlink.wrap<ComlinkFrontendApi>(getComlinkChannel(currentPanel.webview, context));
+      try {
+        const theme = await getMonacoTheme();
+        await setTheme(theme);
+      } catch (e) {
+        console.error(e);
+      }
     }
   });
 
@@ -75,25 +77,26 @@ export async function activate(context: ExtensionContext) {
 
     currentPanel.webview.html = getVueFrontendPanelContent(context, currentPanel);
 
-    const themeJson = await getMonacoTheme().catch(() => undefined);
-    await currentPanel.webview.postMessage({ type: 'theme', data: themeJson } as VscodeMessage);
-
     currentPanel.onDidDispose(() => {
       currentPanel = undefined;
     });
 
-    currentPanel.webview.onDidReceiveMessage(
-      async (message: VscodeMessage) => {
-        if (message.type === 'openFile') {
-          await showFile(message.data.file, message.data.line);
-        }
-      },
-      undefined,
-      context.subscriptions
-    );
+    Comlink.expose({
+      async showFile(path: string, line: number) {
+        await showFile(path, line);
+      }
+    } as ComlinkBackendApi, getComlinkChannel(currentPanel.webview, context));
+
+    const { setTheme } = Comlink.wrap<ComlinkFrontendApi>(getComlinkChannel(currentPanel.webview, context));
+    try {
+      const theme = await getMonacoTheme();
+      await setTheme(theme);
+    } catch (e) {
+      console.error(e);
+    }
 
     if (debug.activeDebugSession) {
-      await updateViewWithStackTrace(currentPanel.webview);
+      await updateViewWithStackTrace(currentPanel.webview, context);
     } else {
       window.showWarningMessage('No active debug session, the view will automatically update when a debug session is started');
     }

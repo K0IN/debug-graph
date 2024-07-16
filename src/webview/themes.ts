@@ -1,20 +1,8 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { workspace, extensions } from "vscode";
+import { MonacoTheme } from "../types";
 
-type MonacoTheme = {
-  base: string;
-  inherit: boolean;
-  rules: {
-    token: string;
-    foreground: string;
-    background: string;
-    fontStyle: string;
-  }[];
-  colors: {
-    [key: string]: string;
-  };
-};
 
 async function getCurrentThemeData(): Promise<object | undefined> {
   const config = workspace.getConfiguration();

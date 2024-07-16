@@ -1,11 +1,11 @@
 {
-  "name": "call-graph",
+  "name": "shared",
   "displayName": "call-graph",
   "description": "A Visual Studio Code extension that shows all the function calls (code paths) that lead to a breakpoint.",
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/K0IN/stacktrace-history/"
+    "url": "git+https://github.com/K0IN/stacktrace-history.git"
   },
   "engines": {
     "vscode": "^1.91.0"
@@ -58,17 +58,27 @@
     "compile-frontend": "cd frontend && npm run build"
   },
   "devDependencies": {
-    "@types/vscode": "^1.91.0",
     "@types/mocha": "^10.0.7",
     "@types/node": "20.x",
+    "@types/vscode": "^1.91.0",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.11.0",
-    "eslint": "^8.57.0",
-    "typescript": "^5.4.5",
-    "ts-loader": "^9.5.1",
-    "webpack": "^5.92.1",
-    "webpack-cli": "^5.1.4",
     "@vscode/test-cli": "^0.0.9",
-    "@vscode/test-electron": "^2.4.0"
-  }
+    "@vscode/test-electron": "^2.4.0",
+    "eslint": "^8.57.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.5.3",
+    "webpack": "^5.92.1",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "comlink": "^4.4.1",
+    "shared": "file:shared"
+  },
+  "bugs": {
+    "url": "https://github.com/K0IN/stacktrace-history/issues"
+  },
+  "homepage": "https://github.com/K0IN/stacktrace-history#readme",
+  "author": "",
+  "license": "ISC"
 }

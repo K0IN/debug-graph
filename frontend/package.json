@@ -15,7 +15,9 @@
   "dependencies": {
     "@guolao/vue-monaco-editor": "^1.5.1",
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "comlink": "^4.4.1",
     "monaco-editor": "^0.50.0",
+    "shared": "file:../shared",
     "vue": "^3.4.29"
   },
   "devDependencies": {

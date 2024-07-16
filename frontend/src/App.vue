@@ -1,29 +1,30 @@
 <script setup lang="ts">
-import type { VscodeMessage, StackTraceInfo } from "./types";
+import type { StackTraceInfo, ComlinkFrontendApi, ComlinkBackendApi } from "shared/src/index";
 import { nextTick, ref } from "vue";
 import { editor } from 'monaco-editor/esm/vs/editor/editor.api'
 import { Range } from 'monaco-editor/esm/vs/editor/editor.api'
 import { useMonaco } from '@guolao/vue-monaco-editor';
 import type { } from "vscode-webview";
+import * as Comlink from "comlink/dist/esm/comlink";
+import { getComlinkChannel } from "./messaging";
 
 const { monacoRef } = useMonaco()
-const vscode = acquireVsCodeApi();
 const stacktrace = ref<StackTraceInfo>([]);
 let theme: object | undefined = undefined;
 
-
-window.onmessage = async (event: MessageEvent<VscodeMessage>) => {
-  const message = event.data;
-  if (message.type === "stackTrace") {
-    stacktrace.value = []; // remove all previous stack traces elements
+Comlink.expose({
+  setStackTrace: async (stackTrace: StackTraceInfo) => {
+    stacktrace.value = [];
     await nextTick();
-    stacktrace.value = message.data; // add new stack traces elements
-  } else if (message.type === "theme") {
-    theme = message.data; // set the theme
-  } else {
-    console.error("Unknown message type", message);
-  }
-};
+    stacktrace.value = stackTrace;
+  },
+  setTheme: (newTheme: object) => {
+    theme = newTheme;
+  },
+} as ComlinkFrontendApi, getComlinkChannel());
+
+const backend = Comlink.wrap<ComlinkBackendApi>(getComlinkChannel());
+
 
 const MONACO_EDITOR_OPTIONS = {
   minimap: { enabled: false },
@@ -35,7 +36,7 @@ const MONACO_EDITOR_OPTIONS = {
   stickyScrolling: false,
 } as editor.IEditorOptions;
 
-const openFile = (file: string, line: number) => vscode.postMessage({ type: "openFile", data: { file, line, } } as VscodeMessage);
+const openFile = (file: string, line: number) => backend.showFile(file, line);
 
 const addEditorAndSetupHighlights = (edit: editor.IStandaloneCodeEditor, index: number) => {
   const stacktraceFrameForEditor = stacktrace.value[index];
@@ -65,9 +66,13 @@ const addEditorAndSetupHighlights = (edit: editor.IStandaloneCodeEditor, index: 
   // });
 
   if (theme) {
-    const themeName = 'tmp';
-    monacoRef.value?.editor.defineTheme(themeName, theme as editor.IStandaloneThemeData);
-    monacoRef.value?.editor.setTheme(themeName);
+    try {
+      const themeName = 'tmp';
+      monacoRef.value?.editor.defineTheme(themeName, theme as editor.IStandaloneThemeData);
+      monacoRef.value?.editor.setTheme(themeName);
+    } catch (e) {
+      console.error("error setting theme", e);
+    }
   }
 
   setTimeout(() => {
@@ -76,10 +81,14 @@ const addEditorAndSetupHighlights = (edit: editor.IStandaloneCodeEditor, index: 
     edit.layout(); // Ensure the editor is refreshed
   }, 10);
 };
+
 // todo disable scrolling on the editor
 </script>
 
 <template>
+  <div v-if="stacktrace && stacktrace.length === 0">
+    <p>No stacktrace available</p>
+  </div>
   <div class="list">
     <vscode-panel-view class="frame-container"
       v-for="traceFrame in stacktrace.map((traceFrame, index) => ({ traceFrame, index }))"
@@ -103,7 +112,7 @@ const addEditorAndSetupHighlights = (edit: editor.IStandaloneCodeEditor, index: 
   justify-content: center;
   overflow: auto;
   gap: 1em;
-  padding: 1px;
+  padding: 4px;
 }
 
 .frame-container {
