@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { workspace, extensions } from "vscode";
-import { MonacoTheme } from "../types";
+import { MonacoTheme } from "shared/src/index";
 
 
 async function getCurrentThemeData(): Promise<object | undefined> {
@@ -29,26 +29,22 @@ function convertVSCodeThemeToMonacoTheme(themeData: any): MonacoTheme {
     inherit: true,
     rules: [] as any,
     colors: {} as any
-  };
+  } as MonacoTheme;
 
   monacoTheme.colors['editor.background'] = themeData.colors['editor.background'];
   monacoTheme.colors['editor.foreground'] = themeData.colors['editor.foreground'];
 
-  if (themeData.tokenColors) {
-    themeData.tokenColors.forEach((token: any) => {
-      monacoTheme.rules.push({
-        token: token.scope,
-        foreground: token.settings.foreground,
-        background: token.settings.background,
-        fontStyle: token.settings.fontStyle
-      });
-    });
-  }
+  monacoTheme.rules = themeData.tokenColors?.map((token: any) => ({
+    token: token.scope,
+    foreground: token.settings.foreground,
+    background: token.settings.background,
+    fontStyle: token.settings.fontStyle
+  })) ?? [];
 
   return monacoTheme;
 }
 
-function getMonacoBaseTheme(vscodeThemeType: string): string {
+function getMonacoBaseTheme(vscodeThemeType: string | MonacoTheme['base']): MonacoTheme['base'] {
   switch (vscodeThemeType) {
     case 'vs':
     case 'vs-dark':

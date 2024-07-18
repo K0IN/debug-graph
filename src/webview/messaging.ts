@@ -1,4 +1,4 @@
-import { ExtensionContext, Webview, WebviewPanel } from "vscode";
+import { ExtensionContext, Webview } from "vscode";
 
 import type { Endpoint } from "comlink/dist/esm/comlink";
 export function getComlinkChannel(webview: Webview, context: ExtensionContext): Endpoint {
