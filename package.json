@@ -50,12 +50,13 @@
     "compile": "npm run compile-frontend && webpack",
     "watch": "npm run compile-frontend && webpack --watch",
     "package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
+    "compile-tests": "tsc -p ./src/ --outDir out",
+    "watch-tests": "tsc -p ./src/ -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test",
-    "compile-frontend": "cd frontend && npm run build"
+    "compile-frontend": "cd frontend && npm run build",
+    "build": "npm run compile"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
