@@ -116,6 +116,11 @@ const addEditorAndSetupHighlights = async (edit: editor.IStandaloneCodeEditor, i
   });
 };
 
+function getRealLineNumber(trace: CallLocation, lineNumber: number) {
+  const lineOffset = trace.fileLocationOffset.startLine;
+  return lineOffset + lineNumber; // WARNING: this is 1-based
+}
+
 // todo disable scrolling on the editor
 </script>
 
@@ -128,11 +133,15 @@ const addEditorAndSetupHighlights = async (edit: editor.IStandaloneCodeEditor, i
     <vscode-panel-view class="frame-container"
       v-for="traceFrame in stacktrace.map((traceFrame, index) => ({ traceFrame, index }))"
       :key="traceFrame.traceFrame.code + traceFrame.traceFrame.file + traceFrame.traceFrame.locationInCode.startLine">
-      <vscode-link style="grid-area: path" class="title-element" :href="traceFrame.traceFrame.file"
-        @click="() => openFile(traceFrame.traceFrame.file, 1)">
-        {{ traceFrame.traceFrame.file }}
+      <vscode-link style="grid-area: path;  white-space: nowrap;" class="title-element"
+        :href="traceFrame.traceFrame.file" @click="() => openFile(traceFrame.traceFrame.file, 1)">
+        {{ traceFrame.traceFrame.file }}:{{ getRealLineNumber(traceFrame.traceFrame,
+          traceFrame.traceFrame.locationInCode.startLine) }}
       </vscode-link>
-      <vue-monaco-editor style="grid-area: code" class="no-scroll" v-model:value="traceFrame.traceFrame.code"
+      <vscode-button style="grid-area: focus" @click="() => backend.setFrameId(traceFrame.traceFrame.frameId)">
+        highlight frame
+      </vscode-button>
+      <vue-monaco-editor style="grid-area: code;" class="no-scroll" v-model:value="traceFrame.traceFrame.code"
         theme="vs-dark" :options="MONACO_EDITOR_OPTIONS" :language="traceFrame.traceFrame.language"
         @mount="(editor: any) => addEditorAndSetupHighlights(editor, traceFrame.index)" />
     </vscode-panel-view>
@@ -163,9 +172,9 @@ const addEditorAndSetupHighlights = async (edit: editor.IStandaloneCodeEditor, i
   outline: 1px solid var(--vscode-panel-border);
   gap: 6px;
   grid-template-areas:
-    "path path path"
+    "path path focus"
     "code code code";
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr auto;
   grid-template-rows: 1fr min-content;
 }
 

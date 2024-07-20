@@ -39,4 +39,5 @@ export type ComlinkFrontendApi = {
 export type ComlinkBackendApi = {
   showFile: (path: string, line: number) => void;
   hover: (path: string, line: number, column: number, frameId: number) => Promise<string>;
+  setFrameId: (frameId: number) => void;
 };

@@ -1,4 +1,4 @@
-import { commands, debug, ExtensionContext, Position, Selection, TextEditorRevealType, Uri, Webview, WebviewPanel, window, workspace } from 'vscode';
+import { commands, debug, DebugStackFrame, ExtensionContext, Position, Selection, TextEditorRevealType, Uri, Webview, WebviewPanel, window, workspace } from 'vscode';
 import { ComlinkBackendApi, ComlinkFrontendApi } from 'shared/src/index';
 import { getMonacoTheme } from './webview/themes';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
@@ -6,6 +6,8 @@ import * as Comlink from "comlink/dist/esm/comlink";
 import { getComlinkChannel } from './webview/messaging';
 import { getCurrentValueForPosition } from './inspector';
 import { getStacktraceInfo } from './callstack-extractor';
+import { executeStacktrace } from './typed-commands';
+import { threadId } from 'worker_threads';
 
 async function showFile(path: string, line: number) {
   const uri = Uri.from({ scheme: 'file', path });
@@ -68,7 +70,7 @@ export async function activate(context: ExtensionContext) {
     }
   });
 
-  commands.registerCommand('call-graph.helloWorld', async () => {
+  commands.registerCommand('call-graph.show-call-graph', async () => {
     if (!currentPanel?.webview) {
       currentPanel = createWebview(context);
     } else {
@@ -83,23 +85,27 @@ export async function activate(context: ExtensionContext) {
 
     Comlink.expose({
       showFile: (path: string, line: number) => showFile(path, line),
-      hover: async (path: string, line: number, column: number, frameId: number) => {
-        console.log("getting hover info for", path, line, column);
-        try {
-          const test = await getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), line, column, frameId);
-          if (!test) { return []; }
-          return test;
-        } catch (e) {
-          console.error(e);
-          // 
-        }
-        return [];
-        // if (!test || test.length === 0) {
-        //   return {};
-        // }
-        // // const a = await getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), new Position(line, column)).catch(e => console.error(e));
+      hover: (path: string, line: number, column: number, frameId: number) => getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), line, column, frameId),
+      setFrameId: async (frameId: number) => {
+        let maxTries = 10;
+        while (maxTries-- > 0) {
+          const current = (debug.activeStackItem as DebugStackFrame)?.frameId;
+          if (!current) {
+            return;
+          }
 
-        // return (test[0].contents as MarkdownString[]).map(c => c.value).join('\n');
+          if (current === frameId) {
+            break;
+          }
+
+          if (current > frameId) {
+            commands.executeCommand('workbench.action.debug.callStackUp');
+          } else {
+            commands.executeCommand('workbench.action.debug.callStackDown');
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
     } as ComlinkBackendApi, getComlinkChannel(currentPanel.webview, context));
 

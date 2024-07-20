@@ -16,25 +16,28 @@
     "Visualization"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onDebug",
+    "onWebviewPanel:graph-visualization"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "call-graph.helloWorld",
-        "title": "Hello World",
+        "command": "call-graph.show-call-graph",
+        "title": "show call graph",
+        "category": "Debug",
         "icon": {
           "dark": "assets/ui-hint.svg",
           "light": "assets/ui-hint.svg"
-        }
+        },
+        "shortTitle": "Call Graph",
+        "enablement": "inDebugMode"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "call-graph.helloWorld",
-          "alt": "Hello World",
+          "command": "call-graph.show-call-graph",
           "when": "inDebugMode",
           "group": "navigation"
         }

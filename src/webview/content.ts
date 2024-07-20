@@ -23,7 +23,7 @@ export function getVueFrontendPanelContent(context: ExtensionContext, panel: Web
 }
 
 export function createWebview(context: ExtensionContext) {
-  return window.createWebviewPanel('stacktrace', 'Stacktrace Visualization', ViewColumn.Beside, {
+  return window.createWebviewPanel('graph-visualization', 'Stacktrace Visualization', ViewColumn.Beside, {
     enableScripts: true,
     enableCommandUris: true,
     enableFindWidget: true,
