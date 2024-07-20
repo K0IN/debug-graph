@@ -12,6 +12,8 @@ const { monacoRef } = useMonaco()
 const stacktrace = ref<StackTraceInfo>([]);
 let theme: object | undefined = undefined;
 
+const debugMode = false;
+
 Comlink.expose({
   setStackTrace: async (stackTrace: StackTraceInfo) => {
     stacktrace.value = [];
@@ -107,8 +109,8 @@ const addEditorAndSetupHighlights = async (edit: editor.IStandaloneCodeEditor, i
       return {
         contents: [
           { value: result },
-          //  { value: `Stacktrace: ${JSON.stringify(stackTraceInfo)}` },
-        ]
+          debugMode ? { value: `Stacktrace: ${JSON.stringify(stackTraceInfo)}` } : undefined,
+        ].filter(Boolean) as IMarkdownString[],
       };
     }
   });
@@ -137,9 +139,11 @@ const addEditorAndSetupHighlights = async (edit: editor.IStandaloneCodeEditor, i
   </div>
 
   <!-- debug show all stacktrace raw data-->
-  <p v-for="traceFrame in stacktrace" :key="traceFrame.code + traceFrame.file + traceFrame.locationInCode.startLine">
-    {{ JSON.stringify(traceFrame) }}
-  </p>
+  <div v-if="debugMode">
+    <p v-for="traceFrame in stacktrace" :key="traceFrame.code + traceFrame.file + traceFrame.locationInCode.startLine">
+      {{ JSON.stringify(traceFrame) }}
+    </p>
+  </div>
 </template>
 
 <style scoped>
