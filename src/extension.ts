@@ -1,11 +1,11 @@
-import { commands, debug, ExtensionContext, Selection, TextEditorRevealType, Uri, Webview, WebviewPanel, window, workspace } from 'vscode';
-import { getStacktraceInfo } from './callstack-extractor';
+import { commands, debug, ExtensionContext, Position, Selection, TextEditorRevealType, Uri, Webview, WebviewPanel, window, workspace } from 'vscode';
 import { ComlinkBackendApi, ComlinkFrontendApi } from 'shared/src/index';
 import { getMonacoTheme } from './webview/themes';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
-// https://github.com/GoogleChromeLabs/comlink
 import * as Comlink from "comlink/dist/esm/comlink";
 import { getComlinkChannel } from './webview/messaging';
+import { getCurrentValueForPosition } from './inspector';
+import { getStacktraceInfo } from './callstack-extractor';
 
 async function showFile(path: string, line: number) {
   const uri = Uri.from({ scheme: 'file', path });
@@ -82,8 +82,24 @@ export async function activate(context: ExtensionContext) {
     });
 
     Comlink.expose({
-      async showFile(path: string, line: number) {
-        await showFile(path, line);
+      showFile: (path: string, line: number) => showFile(path, line),
+      hover: async (path: string, line: number, column: number, frameId: number) => {
+        console.log("getting hover info for", path, line, column);
+        try {
+          const test = await getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), line, column, frameId);
+          if (!test) { return []; }
+          return test;
+        } catch (e) {
+          console.error(e);
+          // 
+        }
+        return [];
+        // if (!test || test.length === 0) {
+        //   return {};
+        // }
+        // // const a = await getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), new Position(line, column)).catch(e => console.error(e));
+
+        // return (test[0].contents as MarkdownString[]).map(c => c.value).join('\n');
       }
     } as ComlinkBackendApi, getComlinkChannel(currentPanel.webview, context));
 

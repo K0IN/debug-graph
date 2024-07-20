@@ -1,6 +1,6 @@
 import { DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
 import { executeDocumentSymbolProvider, executeStacktrace, StackTraceFrame } from "./typed-commands";
-import { CallLocation, StackTraceInfo } from "./types";
+import { CallLocation, StackTraceInfo } from "shared/src/index";
 
 async function getAllSubnodesForSymbol(symbol: DocumentSymbol) {
   const symbols: DocumentSymbol[] = [];
@@ -47,31 +47,25 @@ async function convertScriptLineNumberToFunctionLineNumber(file: Uri, zeroIndexe
 }
 
 
-async function getFunctionCode(file: Uri, name: string, zeroIndexedLine: number): Promise<string | undefined> {
+async function getFunctionLocation(file: Uri, name: string, zeroIndexedLine: number): Promise<Range> {
   const documentSymbols = await findSymbolForLine(file, zeroIndexedLine);
   const symbol = documentSymbols
     .filter(symbol => symbol.kind === SymbolKind.Function || symbol.kind === SymbolKind.Method || symbol.kind === SymbolKind.Constructor)
     .find(symbol => symbol.name === name); // avoid getting duplicate symbols
 
-  if (!symbol) {
-    return undefined; // source unknown
+  if (symbol && symbol.range) {
+    return symbol.range;
   }
-  const symbolDoc = await workspace.openTextDocument(file);
-  const range = symbol!.range;
-  const rangeStart = range.start;
-  const rangeEnd = range.end;
-  const { line: startLine, character: startCharacter } = rangeStart;
-  const { line: endLine, character: endCharacter } = rangeEnd;
-  const text = symbolDoc?.getText(new Range(startLine, startCharacter, endLine, endCharacter));
-  return text ?? "";
 
+  throw new Error("Symbol not found");
 }
 
-async function getLocationCode(file: Uri, line: number) {
+async function getCodeAtRange(file: Uri, range: Range): Promise<string | undefined> {
   const symbolDoc = await workspace.openTextDocument(file);
-  const text = symbolDoc?.getText(new Range(line - 1, 0, line + 1, 0));
-  return text;
+  const text = symbolDoc?.getText(range);
+  return text ?? undefined;
 }
+
 
 
 async function getLanguageForFile(file: Uri) {
@@ -82,30 +76,37 @@ async function getLanguageForFile(file: Uri) {
 async function getCallLocation(frame: StackTraceFrame): Promise<CallLocation> {
   const file = Uri.file(frame.source.path);
   const zeroIndexedLine = frame.line - 1;
+  const noFunctionLookupSize = 3;
 
-  let line = await convertScriptLineNumberToFunctionLineNumber(file, zeroIndexedLine);
-  let code = await getFunctionCode(file, frame.name, zeroIndexedLine);
+  const symbolLocation = await getFunctionLocation(file, frame.name, zeroIndexedLine)
+    .catch(() => undefined);
 
-  if (!code) {
-    // we don't know the code / so we show 3 lines of code where we found the call (if possible), our code will be in the middle line so 
-    try {
-      code = await getLocationCode(file, zeroIndexedLine);
-      line = 1;
-    } catch (e) {
-      code = "<source unknown>";
-      line = 0;
-    }
-  }
+
+  const code = symbolLocation
+    ? await getCodeAtRange(file, symbolLocation)
+    : await getCodeAtRange(file, new Range(zeroIndexedLine - noFunctionLookupSize, 0, zeroIndexedLine + noFunctionLookupSize, 99999));
+
+  const line = code
+    ? (symbolLocation
+      ? zeroIndexedLine - symbolLocation.start.line
+      : noFunctionLookupSize)
+    : 0;
 
   const language = await getLanguageForFile(file);
 
   return <CallLocation>{
     code,
     file: file.path,
+    frameId: frame.id,
+
     language,
-    location: {
+    fileLocationOffset: {
+      startLine: frame.line - line,
       startCharacter: 0,
+    },
+    locationInCode: {
       startLine: line,
+      startCharacter: 0,
     }
   };
 }

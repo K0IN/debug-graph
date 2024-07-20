@@ -1,21 +1,24 @@
 export type SerializedRange = {
-  startLine: number;
-  startCharacter: number;
-  endLine?: number;
-  endCharacter?: number;
+  startLine: number;            // zero-based
+  startCharacter: number;       // zero-based
+  endLine?: number;             // zero-based
+  endCharacter?: number;        // zero-based
 };
 
 export interface CallLocation {
+  index: number;
   file: string;
-  location: SerializedRange;
+  locationInCode: SerializedRange; // this is the location inside the sent code!
+  fileLocationOffset: SerializedRange; // this is the location inside the file
   language: string;
-  code?: string;
+  code: string;
+  frameId: number; // the id of the frame to look up the variables, this is the index inside the list on the left in the debug view
 }
 
 export type StackTraceInfo = CallLocation[];
 
 export type MonacoTheme = {
-  base: string;
+  base: 'vs' | 'vs-dark' | 'hc-black';
   inherit: boolean;
   rules: {
     token: string;
@@ -35,4 +38,5 @@ export type ComlinkFrontendApi = {
 
 export type ComlinkBackendApi = {
   showFile: (path: string, line: number) => void;
+  hover: (path: string, line: number, column: number, frameId: number) => Promise<string>;
 };
