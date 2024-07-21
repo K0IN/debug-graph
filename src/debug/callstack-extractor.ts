@@ -49,12 +49,16 @@ async function convertScriptLineNumberToFunctionLineNumber(file: Uri, zeroIndexe
 
 async function getFunctionLocation(file: Uri, name: string, zeroIndexedLine: number): Promise<Range> {
   const documentSymbols = await findSymbolForLine(file, zeroIndexedLine);
-  const symbol = documentSymbols
-    .filter(symbol => symbol.kind === SymbolKind.Function || symbol.kind === SymbolKind.Method || symbol.kind === SymbolKind.Constructor)
-    .find(symbol => symbol.name === name); // avoid getting duplicate symbols
+  const allFunctions = documentSymbols
+    .filter(symbol => symbol.kind === SymbolKind.Function || symbol.kind === SymbolKind.Method || symbol.kind === SymbolKind.Constructor); // avoid getting duplicate symbols
 
-  if (symbol && symbol.range) {
-    return symbol.range;
+  // in go functions in the stack frame are spelled module.function name, so we WONT find it, best we can do is try to match it and fall back to line number
+  const exactMatch = allFunctions.find(symbol => symbol.name === name);
+
+  if (exactMatch && exactMatch.range) {
+    return exactMatch.range;
+  } else if (allFunctions.length === 1) {
+    return allFunctions[0].range;
   }
 
   throw new Error("Symbol not found");

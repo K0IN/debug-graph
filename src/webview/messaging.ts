@@ -8,8 +8,8 @@ export function getComlinkChannel(webview: Webview, context: ExtensionContext): 
     postMessage: (message) => {
       try {
         webview.postMessage(message);
-      } catch (e: any) {
-        window.showErrorMessage(`Failed to post message: ${e.message}`);
+      } catch (e: unknown) {
+        window.showErrorMessage(`Failed to post message: ${(e as Error).message}`);
       }
     }
   };

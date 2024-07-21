@@ -1,12 +1,11 @@
-import { commands, debug, DebugStackFrame, ExtensionContext, Selection, TextEditorRevealType, Uri, Webview, WebviewPanel, window, workspace } from 'vscode';
-import { ComlinkBackendApi, ComlinkFrontendApi } from 'shared/src/index';
+import { commands, debug, ExtensionContext, Webview, WebviewPanel, window, workspace } from 'vscode';
+import { ComlinkFrontendApi } from 'shared/src/index';
 import { getMonacoTheme } from './webview/themes';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
 import * as Comlink from "comlink/dist/esm/comlink";
 import { getComlinkChannel } from './webview/messaging';
-import { getCurrentValueForPosition } from './inspector';
-import { getStacktraceInfo } from './callstack-extractor';
-import { FrontendApi } from './frontend-functions';
+import { getStacktraceInfo } from './debug/callstack-extractor';
+import { FrontendApi } from './debug/frontend-functions';
 
 let currentFrontendRpcChannel: Comlink.Remote<ComlinkFrontendApi> | undefined = undefined;
 
@@ -14,7 +13,7 @@ async function updateViewWithStackTrace(webview: Webview, context: ExtensionCont
   const result = await getStacktraceInfo();
   try {
     await currentFrontendRpcChannel?.setStackTrace(result);
-  } catch (e: any) {
+  } catch (e: unknown) {
     window.showErrorMessage("failed to send stacktrace to ui, try agin");
   }
 }

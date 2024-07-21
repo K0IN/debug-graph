@@ -1,4 +1,4 @@
-import { DocumentSymbol, Hover, Location, LocationLink, Position, Uri, WorkspaceEdit, commands, debug } from "vscode";
+import { DocumentSymbol, Uri, commands, debug } from "vscode";
 
 export async function executeDocumentSymbolProvider(uri: Uri) {
   return await commands.executeCommand</* SymbolInformation[] |*/ DocumentSymbol[] | undefined>(
