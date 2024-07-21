@@ -6,7 +6,7 @@ import { allComponents, provideVSCodeDesignSystem } from "@vscode/webview-ui-too
 import type { CallLocation } from 'shared/src';
 
 provideVSCodeDesignSystem().register(allComponents);
-export const vscode = acquireVsCodeApi();
+export const vscode = acquireVsCodeApi<{ codeDisplayMode: number }>();
 export const stacktraceMap = new Map</* editor.ITextModel.id */string, CallLocation>();
 
 const app = createApp(App);

@@ -8,7 +8,7 @@ import callstack_view from "./stacktrace-frame.vue"
 import { useMonaco } from "@guolao/vue-monaco-editor";
 import { watchEffect } from "vue";
 import { editor, languages, Position, type IMarkdownString } from "monaco-editor";
-import { stacktraceMap } from "./main";
+import { stacktraceMap, vscode } from "./main";
 
 const stacktrace = ref<StackTraceInfo>([]);
 let theme: MonacoTheme | undefined = undefined;
@@ -31,20 +31,23 @@ const backend = Comlink.wrap<ComlinkBackendApi>(getComlinkChannel());
 
 
 function initGlobalMonaco() {
-  monacoRef.value?.languages.registerHoverProvider('python', {
+  monacoRef.value?.languages.registerHoverProvider('*', {
     provideHover: async (model: editor.ITextModel, position: Position, _token: /* CancellationToken */ any, _context?: languages.HoverContext<languages.Hover> | undefined): Promise<languages.Hover> => {
       const callLocationInfo = stacktraceMap.get(model.id);
       if (!callLocationInfo) {
-        return { contents: [] };
+        return {
+          contents: [
+            // { value: `Stacktrace: ${JSON.stringify(callLocationInfo)}` }
+          ]
+        };
       }
 
       const lineOffset = callLocationInfo.fileLocationOffset.startLine;
-      const stackTraceInfo = callLocationInfo;
-      const result = await backend.hover(callLocationInfo.file, lineOffset - 1 + position.lineNumber - 1, position.column, stackTraceInfo.frameId);
+      const result = await backend.hover(callLocationInfo.file, lineOffset - 1 + position.lineNumber - 1, position.column, callLocationInfo.frameId);
       return {
         contents: [
           { value: result },
-          // debugMode ? { value: `Stacktrace: ${JSON.stringify(stackTraceInfo)}` } : undefined,
+          //  { value: `Stacktrace: ${JSON.stringify(callLocationInfo)}` }
         ].filter(Boolean) as IMarkdownString[],
       };
     }
@@ -85,9 +88,29 @@ function handleSetStackFrame(stackFrameId: number) {
   console.log("handle set frame", stackFrameId);
   backend.setFrameId(stackFrameId);
 }
+
+const codeOptions = [
+  "Full function Code",
+  "Only Executed Code",
+  "Dense Code",
+];
+
+function onCodeDisplayTypeChanged(index: number) {
+  vscode.setState({ codeDisplayMode: index });
+
+  console.log("onCodeDisplayTypeChanged", index);
+}
+
+const selectedCodeDisplayMode = 1; // vscode.getState()?.codeDisplayMode ?? 0;
+
 </script>
 
 <template>
+  <vscode-dropdown @change="(e: any) => onCodeDisplayTypeChanged(codeOptions.indexOf(e.target!.value))"
+    :selected="selectedCodeDisplayMode">
+    <vscode-option v-for="option in codeOptions" :key="option"> {{ option }}</vscode-option>
+  </vscode-dropdown>
+
   <div v-if="stacktrace && stacktrace.length === 0">
     <p>No stacktrace available</p>
   </div>
