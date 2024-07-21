@@ -48,6 +48,7 @@ async function inspectVariableAtPosition(
       const variablesResponse = await session.customRequest('variables', { variablesReference: scope.variablesReference });
       const variable = variablesResponse.variables.find((v: any) => v.name === variableName);
 
+      // todo some things cat be expressed as variables (func refs in python for example)
       if (variable) {
         return { name: variable.name, value: variable.value };
       }
