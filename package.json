@@ -1,8 +1,14 @@
 {
-  "name": "shared",
+  "name": "call-graph",
   "displayName": "call-graph",
   "description": "A Visual Studio Code extension that shows all the function calls (code paths) that lead to a breakpoint.",
   "version": "0.0.1",
+  "licenses": [
+    {
+      "url": "https://github.com/K0IN/stacktrace-history/LICENSE",
+      "type": "MIT"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/K0IN/stacktrace-history.git"
@@ -44,9 +50,10 @@
       ]
     }
   },
-  "files": [
-    "frontend/dist",
-    "frontend/dist/assets"
+  "afiles": [
+    "dist/",
+    "frontend/dist/",
+    "frontend/dist/assets/"
   ],
   "scripts": {
     "vscode:prepublish": "npm run compile-frontend && npm run package",
@@ -56,10 +63,15 @@
     "compile-tests": "tsc -p ./src/ --outDir out",
     "watch-tests": "tsc -p ./src/ -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "lint": "npm run lint-frontend && eslint src --ext ts",
+    "lint-frontend": "cd frontend && npm run lint",
     "test": "vscode-test",
     "compile-frontend": "cd frontend && npm run build",
-    "build": "npm run compile"
+    "build": "npm run compile",
+    "bundle": "npm run package && vsce package",
+    "install": "npm i && cd frontend && npm i",
+    "install-extension": "npm run bundle && code --install-extension call-graph-0.0.1.vsix",
+    "uninstall-extension": "code --uninstall k0in.call-graph"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
@@ -69,6 +81,7 @@
     "@typescript-eslint/parser": "^7.11.0",
     "@vscode/test-cli": "^0.0.9",
     "@vscode/test-electron": "^2.4.0",
+    "@vscode/vsce": "^2.31.1",
     "eslint": "^8.57.0",
     "ts-loader": "^9.5.1",
     "typescript": "^5.5.3",
@@ -83,6 +96,7 @@
     "url": "https://github.com/K0IN/stacktrace-history/issues"
   },
   "homepage": "https://github.com/K0IN/stacktrace-history#readme",
-  "author": "",
+  "author": "k0in",
+  "publisher": "k0in",
   "license": "ISC"
 }

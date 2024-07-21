@@ -12,3 +12,8 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+frontend/**
+test_code/
+shared/
+.docs/
+!frontend/dist/**
