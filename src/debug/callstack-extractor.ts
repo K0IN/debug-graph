@@ -1,4 +1,4 @@
-import { DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
+import { debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
 import { executeDocumentSymbolProvider, executeStacktrace, StackTraceFrame } from "./typed-commands";
 import { CallLocation, StackTraceInfo } from "shared/src/index";
 
@@ -12,6 +12,7 @@ async function getAllSubnodesForSymbol(symbol: DocumentSymbol) {
   }
   return symbols;
 }
+
 
 async function getAllSymbols(file: Uri): Promise<DocumentSymbol[]> {
   const documentSymbols = await executeDocumentSymbolProvider(file);
@@ -64,6 +65,7 @@ async function getFunctionLocation(file: Uri, name: string, zeroIndexedLine: num
   throw new Error("Symbol not found");
 }
 
+
 async function getCodeAtRange(file: Uri, range: Range): Promise<string | undefined> {
   const symbolDoc = await workspace.openTextDocument(file);
   const text = symbolDoc?.getText(range);
@@ -71,11 +73,11 @@ async function getCodeAtRange(file: Uri, range: Range): Promise<string | undefin
 }
 
 
-
 async function getLanguageForFile(file: Uri) {
   const document = await workspace.openTextDocument(file);
   return document.languageId;
 }
+
 
 async function getCallLocation(frame: StackTraceFrame): Promise<CallLocation> {
   const file = Uri.file(frame.source.path);
@@ -115,7 +117,8 @@ async function getCallLocation(frame: StackTraceFrame): Promise<CallLocation> {
   };
 }
 
+
 export async function getStacktraceInfo(): Promise<StackTraceInfo> {
-  const stackFrames = await executeStacktrace({ threadId: 1 });
+  const stackFrames = await executeStacktrace({ threadId: debug.activeStackItem?.threadId ?? 1 });
   return await Promise.all(stackFrames.stackFrames.map((frame, index) => getCallLocation(frame)));
 }
