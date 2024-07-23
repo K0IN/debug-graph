@@ -2,24 +2,22 @@
 import { useMonaco } from '@guolao/vue-monaco-editor';
 import { editor, Range } from 'monaco-editor';
 import type { CallLocation, MonacoTheme } from 'shared/src';
-import { onUnmounted } from 'vue';
 import { nextTick } from 'vue';
 import { stacktraceMap } from './main';
+import type { DisplayMode } from './displaymode';
 
-const { monacoRef, unload } = useMonaco();
+const { monacoRef } = useMonaco();
 
-const props = defineProps<{
-  stacktrace: CallLocation,
-  theme?: MonacoTheme
+const { traceFrame, theme, displayMode } = defineProps<{
+  traceFrame: CallLocation,
+  theme?: MonacoTheme,
+  displayMode?: DisplayMode
 }>();
 
 const emit = defineEmits<{
   openFile: [path: string, line: number],
   setStackFrameId: [frameId: number]
 }>();
-
-const traceFrame = props.stacktrace;
-const theme = props.theme;
 
 const MONACO_EDITOR_OPTIONS = {
   minimap: { enabled: false },
@@ -50,7 +48,10 @@ async function addEditorAndSetupHighlights(edit: editor.IStandaloneCodeEditor) {
     return;
   }
 
-  const currentId = edit.getModel()?.id!; // todo handle undefined
+  const currentId = edit.getModel()?.id!;
+  if (!currentId) {
+    throw new Error("Model does not have a id!")
+  }
   stacktraceMap.set(currentId, stacktraceFrameForEditor);
   edit.onDidDispose(() => stacktraceMap.delete(currentId));
 
@@ -64,21 +65,6 @@ async function addEditorAndSetupHighlights(edit: editor.IStandaloneCodeEditor) {
   const { startLine, startCharacter, endLine, endCharacter } = stacktraceFrameForEditor.locationInCode!;
   edit.createDecorationsCollection([{ range: new Range((startLine ?? 0) + 1, startCharacter ?? 1, endLine ?? (startLine ?? 0) + 1, endCharacter ?? 9999), options: { isWholeLine: false, inlineClassName: 'highlight' } }]);
 
-  // provideInlayHints
-  // monacoRef.value?.languages.registerInlayHintsProvider('python', {
-  //   provideInlayHints: async function (model: editor.ITextModel, range: Range, token: CancellationToken): Promise<languages.InlayHintList> {
-  //     return {
-  //       hints: [{
-  //         kind: InlayHintKind.Type as any,
-  //         position: new Position(1, 1),
-  //         label: "inlay hint",
-  //       }],
-  //       dispose: () => { }
-  //     };
-  //   }
-  // });
-
-  console.log("setting theme", theme);
   if (theme) {
     try {
       const themeName = 'tmp';
@@ -92,24 +78,28 @@ async function addEditorAndSetupHighlights(edit: editor.IStandaloneCodeEditor) {
   await nextTick();
 
   const size = edit.getScrollHeight();
-  edit.layout({ width: 100, height: size });
+  const lineCount = edit.getModel()?.getLineCount() ?? 0;
+
+  // add a padding line so the editor shows all lines properly!
+  // this is only a issue if we have a horizontal scroll bar.
+  const lineSize = (lineCount > 0) ? (size / lineCount) : 14;
+
+  edit.layout({ width: 100, height: size + lineSize });
   edit.layout(); // Ensure the editor is refreshed
 };
 
-onUnmounted(() => !monacoRef.value && unload())
 </script>
 
 <template>
   <vscode-panel-view class="frame-container">
     <vscode-link style="grid-area: path;  white-space: nowrap;" class="title-element" :href="traceFrame.file" @click="() => openFile(traceFrame.file, getRealLineNumber(traceFrame,
       traceFrame.locationInCode.startLine))">
-      {{ traceFrame.file }}:{{ getRealLineNumber(traceFrame,
-        traceFrame.locationInCode.startLine) }}
+      {{ traceFrame.file }}:{{ getRealLineNumber(traceFrame, traceFrame.locationInCode.startLine) }}
     </vscode-link>
     <vscode-button style="grid-area: focus" @click="() => switchToStackFrame(traceFrame.frameId)">
       highlight frame
     </vscode-button>
-    <vue-monaco-editor style="grid-area: code;" class="no-scroll" v-model:value="traceFrame.code" theme="vs-dark"
+    <vue-monaco-editor style="grid-area: code;" class="no-scroll" :value="traceFrame.code" theme="vs-dark"
       :options="MONACO_EDITOR_OPTIONS" :language="traceFrame.language"
       @mount="(editor: any) => addEditorAndSetupHighlights(editor)" />
   </vscode-panel-view>
