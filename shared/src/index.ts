@@ -31,6 +31,13 @@ export type MonacoTheme = {
   };
 };
 
+
+export type ValueLookupResult = {
+  type?: string,
+  value?: any, // don't know
+  inner?: ValueLookupResult[] // sub values
+};
+
 export type ComlinkFrontendApi = {
   setStackTrace: (stackTrace: StackTraceInfo) => void;
   setTheme: (newTheme: MonacoTheme) => void;
@@ -38,6 +45,6 @@ export type ComlinkFrontendApi = {
 
 export type ComlinkBackendApi = {
   showFile: (path: string, line: number) => void;
-  hover: (path: string, line: number, column: number, frameId: number) => Promise<string>;
+  getValueForPosition: (path: string, line: number, column: number, frameId: number) => Promise<ValueLookupResult>;
   setFrameId: (frameId: number) => void;
 };

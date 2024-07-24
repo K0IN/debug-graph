@@ -1,6 +1,6 @@
 import { ComlinkBackendApi } from "shared/src";
 import { commands, debug, DebugStackFrame, Selection, TextEditorRevealType, Uri, window, workspace } from "vscode";
-import { getCurrentValueForPosition } from "./inspector";
+import { getCurrentValueForPosition } from "../inspect";
 
 async function showFile(path: string, line: number) {
   try {
@@ -35,6 +35,6 @@ async function setDebugFrame(frameId: number) {
 
 export const FrontendApi = {
   showFile: (path: string, line: number) => showFile(path, line),
-  hover: (path: string, line: number, column: number, frameId: number) => getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), line, column, frameId),
+  getValueForPosition: (path: string, line: number, column: number, frameId: number) => getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), line, column, frameId),
   setFrameId: (frameId: number) => setDebugFrame(frameId),
 } as ComlinkBackendApi;
