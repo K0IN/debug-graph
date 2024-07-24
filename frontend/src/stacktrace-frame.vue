@@ -120,7 +120,7 @@ const code = computed(() => {
   const line = props.traceFrame.locationInCode.startLine;
   if (props.denseCodeMode) {
     // todo fix for different newline types
-    code = code.split('\n').slice(0, line + 1 + 1).join('\n').trim(); // +1 for the current line +1 as a lookahead 
+    code = code.split('\n').slice(0, line + 1 + 1).join('\n').trimEnd(); // +1 for the current line +1 as a lookahead 
   }
   return code;
 });
