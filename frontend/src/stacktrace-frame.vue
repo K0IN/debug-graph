@@ -17,15 +17,16 @@ const emit = defineEmits<{
 }>();
 
 const currentEditor = shallowRef<editor.IStandaloneCodeEditor>();
+const monaco = useMonaco();
 
 const MONACO_EDITOR_OPTIONS = {
   minimap: { enabled: false },
   readOnly: true,
   lineNumbers: "on",
   scrollbar: { vertical: "hidden", horizontal: "auto" },
-  automaticLayout: true,
   scrollBeyondLastLine: false,
   stickyScrolling: false,
+  contextmenu: false,
 } as editor.IEditorOptions;
 
 function openFile() {
@@ -46,7 +47,7 @@ function setEditor(edit: editor.IStandaloneCodeEditor) {
   if (!edit) {
     return;
   }
-  const currentId = edit.getModel()?.id!;
+  const currentId = edit.getModel()?.id;
   if (!currentId) {
     throw new Error("Model does not have a id!")
   }
@@ -55,7 +56,6 @@ function setEditor(edit: editor.IStandaloneCodeEditor) {
 };
 
 function setDecorators(editor: editor.IStandaloneCodeEditor, position: SerializedRange) {
-  // clear existing decorations
   try {
     const currentDecorations = editor.getDecorationsInRange(new Range(1, 1, 9999999, 999999));
     editor.removeDecorations(currentDecorations?.map(e => e.id) ?? []);
@@ -63,7 +63,6 @@ function setDecorators(editor: editor.IStandaloneCodeEditor, position: Serialize
     /* nop */
   }
 
-  // add new decorations
   const { startLine, startCharacter, endLine, endCharacter } = position;
   editor.createDecorationsCollection([{
     range: new Range(
@@ -73,22 +72,13 @@ function setDecorators(editor: editor.IStandaloneCodeEditor, position: Serialize
       endCharacter ?? 9999),
 
     options: {
-      isWholeLine: false,
+      isWholeLine: true,
       className: 'highlight'
     }
   }]);
 }
 
-function setTheme(monacoTheme: MonacoTheme) {
-  try {
-    const themeName = 'tmp';
-    const { monacoRef } = useMonaco();
-    monacoRef.value?.editor.defineTheme(themeName, monacoTheme as editor.IStandaloneThemeData);
-    monacoRef.value?.editor.setTheme(themeName);
-  } catch (e) {
-    console.error("error setting theme", e);
-  }
-}
+
 async function layoutEditor(editor: editor.IStandaloneCodeEditor) {
   const size = editor.getScrollHeight();
   const lineCount = editor.getModel()?.getLineCount() ?? 0;
@@ -130,15 +120,31 @@ const code = computed(() => {
   const line = props.traceFrame.locationInCode.startLine;
   if (props.denseCodeMode) {
     // todo fix for different newline types
-    code = code.split('\n').slice(0, line + 1 + 3).join('\n'); // +1 for the current line +3 as a lookahead 
+    code = code.split('\n').slice(0, line + 1 + 1).join('\n').trim(); // +1 for the current line +1 as a lookahead 
   }
   return code;
 });
 
+function setTheme(monacoTheme: MonacoTheme) {
+  try {
+    const themeName = 'tmp';
+    monaco.monacoRef.value?.editor.defineTheme(themeName, monacoTheme as editor.IStandaloneThemeData);
+    monaco.monacoRef.value?.editor.setTheme(themeName);
+  } catch (e) {
+    console.error("error setting theme", e);
+  }
+}
+
 watch([currentEditor, code], () => setupEditor().catch(console.error.bind(undefined, "Error while setting up editor")));
-watch([props.theme], () => {
+watch([props.theme, monaco], () => {
   if (props.theme) setTheme(props.theme);
-})
+});
+
+watch(currentEditor, (editor) => {
+  const domNode = editor?.getDomNode();
+  domNode?.addEventListener("scroll", e => e.stopImmediatePropagation(), { capture: true });
+  domNode?.addEventListener("wheel", e => e.stopImmediatePropagation(), { capture: true });
+});
 </script>
 
 <template>
