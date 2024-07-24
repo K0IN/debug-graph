@@ -1,7 +1,7 @@
 import { debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
 import { executeDocumentSymbolProvider } from "./typed-commands";
 import { CallLocation, StackTraceInfo } from "shared/src/index";
-import { callDebug } from "../inspect/typed-debug";
+import { callDebugFunction } from "../inspect/typed-debug";
 import { DebugProtocol } from "@vscode/debugprotocol";
 
 async function getAllSubnodesForSymbol(symbol: DocumentSymbol) {
@@ -124,6 +124,6 @@ async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLoc
 
 
 export async function getStacktraceInfo(): Promise<StackTraceInfo> {
-  const stackFrames = await callDebug('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1 });
+  const stackFrames = await callDebugFunction('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1 });
   return await Promise.all(stackFrames.stackFrames.map((frame, index) => getCallLocation(frame)));
 }

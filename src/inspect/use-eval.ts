@@ -1,6 +1,6 @@
 import { Uri, Position, debug, workspace, DebugSession, window } from "vscode";
 import { ValueLookupResult } from "shared/src";
-import { callDebug } from "./typed-debug";
+import { callDebugFunction } from "./typed-debug";
 
 
 
@@ -37,10 +37,10 @@ export async function getValueWithEvalMethod(uri: Uri, line: number, column: num
   variableName = text.slice(start, end);
 
   // Use the 'evaluate' request to get the variable value
-  const result = await callDebug('evaluate', { expression: variableName, frameId: frameId, context: 'hover' });
+  const result = await callDebugFunction('evaluate', { expression: variableName, frameId: frameId, context: 'hover' });
 
   if (result.variablesReference) {
-    const variablesResponse = await callDebug('variables', { variablesReference: result.variablesReference });
+    const variablesResponse = await callDebugFunction('variables', { variablesReference: result.variablesReference });
     return { type: 'object', value: variablesResponse.variables }; // todo use result
   }
 
