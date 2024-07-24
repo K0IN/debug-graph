@@ -1,5 +1,6 @@
 import { ValueLookupResult } from "shared/src";
 import { Uri, Position, debug, workspace, DebugSession, window } from "vscode";
+import { callDebug } from "./typed-debug";
 
 export async function getValueWithLookupMethod(uri: Uri, line: number, column: number, frameId: number): Promise<ValueLookupResult> {
   const debugSession = debug.activeDebugSession;
@@ -24,16 +25,16 @@ async function inspectVariableAtPosition(
   _position: Position,
   variableName: string, frameId: number
 ): Promise<ValueLookupResult> {
-  const stackTraceResponse = await session.customRequest('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1 });
+  const stackTraceResponse = await callDebug('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1 });
   if (!stackTraceResponse.stackFrames || stackTraceResponse.stackFrames.length === 0) {
     throw new Error('No stack frames');
   }
 
   const frame = stackTraceResponse.stackFrames[0];
-  const scopesResponse = await session.customRequest('scopes', { frameId: frameId || frame.id });
+  const scopesResponse = await callDebug('scopes', { frameId: frameId || frame.id });
 
   for (const scope of scopesResponse.scopes) {
-    const variablesResponse = await session.customRequest('variables', { variablesReference: scope.variablesReference });
+    const variablesResponse = await callDebug('variables', { variablesReference: scope.variablesReference });
     const variable = variablesResponse.variables.find((v: any) => v.name === variableName);
 
     if (variable) {

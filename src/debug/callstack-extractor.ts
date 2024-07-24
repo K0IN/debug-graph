@@ -1,6 +1,8 @@
 import { debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
-import { executeDocumentSymbolProvider, executeStacktrace, StackTraceFrame } from "./typed-commands";
+import { executeDocumentSymbolProvider } from "./typed-commands";
 import { CallLocation, StackTraceInfo } from "shared/src/index";
+import { callDebug } from "../inspect/typed-debug";
+import { DebugProtocol } from "@vscode/debugprotocol";
 
 async function getAllSubnodesForSymbol(symbol: DocumentSymbol) {
   const symbols: DocumentSymbol[] = [];
@@ -79,7 +81,10 @@ async function getLanguageForFile(file: Uri) {
 }
 
 
-async function getCallLocation(frame: StackTraceFrame): Promise<CallLocation> {
+async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLocation> {
+  if (!frame.source?.path) {
+    throw new Error("No source path found for frame");
+  }
   const file = Uri.file(frame.source.path);
   const zeroIndexedLine = frame.line - 1;
   const noFunctionLookupSize = 3;
@@ -119,6 +124,6 @@ async function getCallLocation(frame: StackTraceFrame): Promise<CallLocation> {
 
 
 export async function getStacktraceInfo(): Promise<StackTraceInfo> {
-  const stackFrames = await executeStacktrace({ threadId: debug.activeStackItem?.threadId ?? 1 });
+  const stackFrames = await callDebug('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1 });
   return await Promise.all(stackFrames.stackFrames.map((frame, index) => getCallLocation(frame)));
 }
