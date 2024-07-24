@@ -1,23 +1,22 @@
 <script setup lang="ts">
 import { useMonaco } from '@guolao/vue-monaco-editor';
 import { editor, Range } from 'monaco-editor';
-import type { CallLocation, MonacoTheme } from 'shared/src';
-import { nextTick } from 'vue';
+import type { CallLocation, MonacoTheme, SerializedRange } from 'shared/src';
+import { computed, nextTick, shallowRef, watch } from 'vue';
 import { stacktraceMap } from './main';
-import type { DisplayMode } from './displaymode';
 
-const { monacoRef } = useMonaco();
-
-const { traceFrame, theme, displayMode } = defineProps<{
+const props = defineProps<{
   traceFrame: CallLocation,
   theme?: MonacoTheme,
-  displayMode?: DisplayMode
+  denseCodeMode?: boolean
 }>();
 
 const emit = defineEmits<{
   openFile: [path: string, line: number],
   setStackFrameId: [frameId: number]
 }>();
+
+const currentEditor = shallowRef<editor.IStandaloneCodeEditor>();
 
 const MONACO_EDITOR_OPTIONS = {
   minimap: { enabled: false },
@@ -29,8 +28,8 @@ const MONACO_EDITOR_OPTIONS = {
   stickyScrolling: false,
 } as editor.IEditorOptions;
 
-function openFile(path: string, line: number) {
-  emit("openFile", path, line);
+function openFile() {
+  emit("openFile", props.traceFrame.file, getRealLineNumber(props.traceFrame, props.traceFrame.locationInCode.startLine));
 }
 
 function getRealLineNumber(trace: CallLocation, lineNumber: number) {
@@ -38,70 +37,121 @@ function getRealLineNumber(trace: CallLocation, lineNumber: number) {
   return lineOffset + lineNumber; // WARNING: this is 1-based
 }
 
-async function switchToStackFrame(frameIndex: number) {
+function switchToStackFrame(frameIndex: number) {
   emit("setStackFrameId", frameIndex);
 }
 
-async function addEditorAndSetupHighlights(edit: editor.IStandaloneCodeEditor) {
-  const stacktraceFrameForEditor = traceFrame;
-  if (!stacktraceFrameForEditor) {
+function setEditor(edit: editor.IStandaloneCodeEditor) {
+  currentEditor.value = edit;
+  if (!edit) {
     return;
   }
-
   const currentId = edit.getModel()?.id!;
   if (!currentId) {
     throw new Error("Model does not have a id!")
   }
-  stacktraceMap.set(currentId, stacktraceFrameForEditor);
+  stacktraceMap.set(currentId, props.traceFrame);
   edit.onDidDispose(() => stacktraceMap.delete(currentId));
+};
 
-  edit.revealLineNearTop(stacktraceFrameForEditor.locationInCode.startLine + 1);
-
+function setDecorators(editor: editor.IStandaloneCodeEditor, position: SerializedRange) {
   // clear existing decorations
-  const currentDecorations = edit.getDecorationsInRange(new Range(1, 1, 9999999, 999999));
-  edit.removeDecorations(currentDecorations?.map(e => e.id) ?? []);
-
-  // add new decorations
-  const { startLine, startCharacter, endLine, endCharacter } = stacktraceFrameForEditor.locationInCode!;
-  edit.createDecorationsCollection([{ range: new Range((startLine ?? 0) + 1, startCharacter ?? 1, endLine ?? (startLine ?? 0) + 1, endCharacter ?? 9999), options: { isWholeLine: false, inlineClassName: 'highlight' } }]);
-
-  if (theme) {
-    try {
-      const themeName = 'tmp';
-      monacoRef.value?.editor.defineTheme(themeName, theme as editor.IStandaloneThemeData);
-      monacoRef.value?.editor.setTheme(themeName);
-    } catch (e) {
-      console.error("error setting theme", e);
-    }
+  try {
+    const currentDecorations = editor.getDecorationsInRange(new Range(1, 1, 9999999, 999999));
+    editor.removeDecorations(currentDecorations?.map(e => e.id) ?? []);
+  } catch (_e: unknown) {
+    /* nop */
   }
 
-  await nextTick();
+  // add new decorations
+  const { startLine, startCharacter, endLine, endCharacter } = position;
+  editor.createDecorationsCollection([{
+    range: new Range(
+      (startLine ?? 0) + 1,
+      startCharacter ?? 1,
+      endLine ?? (startLine ?? 0) + 1,
+      endCharacter ?? 9999),
 
-  const size = edit.getScrollHeight();
-  const lineCount = edit.getModel()?.getLineCount() ?? 0;
+    options: {
+      isWholeLine: false,
+      className: 'highlight'
+    }
+  }]);
+}
 
+function setTheme(monacoTheme: MonacoTheme) {
+  try {
+    const themeName = 'tmp';
+    const { monacoRef } = useMonaco();
+    monacoRef.value?.editor.defineTheme(themeName, monacoTheme as editor.IStandaloneThemeData);
+    monacoRef.value?.editor.setTheme(themeName);
+  } catch (e) {
+    console.error("error setting theme", e);
+  }
+}
+async function layoutEditor(editor: editor.IStandaloneCodeEditor) {
+  const size = editor.getScrollHeight();
+  const lineCount = editor.getModel()?.getLineCount() ?? 0;
   // add a padding line so the editor shows all lines properly!
   // this is only a issue if we have a horizontal scroll bar.
   const lineSize = (lineCount > 0) ? (size / lineCount) : 14;
+  editor.layout({ width: 0, height: 0 }); // prevent growing
+  await nextTick();
+  editor.layout({ width: 100, height: size + lineSize });
+}
 
-  edit.layout({ width: 100, height: size + lineSize });
-  edit.layout(); // Ensure the editor is refreshed
-};
+async function setupEditor() {
+  const editor = currentEditor.value;
+  if (!editor || !props.traceFrame) {
+    return;
+  }
 
+  async function update() {
+    if (!editor) {
+      return
+    }
+    editor.revealLineNearTop(props.traceFrame.locationInCode.startLine + 1);
+    setDecorators(editor, props.traceFrame.locationInCode);
+    await layoutEditor(editor);
+
+    if (props.theme) {
+      setTheme(props.theme);
+    }
+  }
+
+  const disposable = editor.onDidChangeModelContent(update);
+  editor.onDidDispose(() => disposable.dispose());
+
+  await update()
+}
+
+const code = computed(() => {
+  let code = props.traceFrame.code;
+  const line = props.traceFrame.locationInCode.startLine;
+  if (props.denseCodeMode) {
+    // todo fix for different newline types
+    code = code.split('\n').slice(0, line + 1 + 3).join('\n'); // +1 for the current line +3 as a lookahead 
+  }
+  return code;
+});
+
+watch([currentEditor, code], () => setupEditor().catch(console.error.bind(undefined, "Error while setting up editor")));
+watch([props.theme], () => {
+  if (props.theme) setTheme(props.theme);
+})
 </script>
 
 <template>
   <vscode-panel-view class="frame-container">
-    <vscode-link style="grid-area: path;  white-space: nowrap;" class="title-element" :href="traceFrame.file" @click="() => openFile(traceFrame.file, getRealLineNumber(traceFrame,
-      traceFrame.locationInCode.startLine))">
+    <vscode-link style="grid-area: path;  white-space: nowrap;" class="title-element" :href="traceFrame.file"
+      @click="() => openFile()">
       {{ traceFrame.file }}:{{ getRealLineNumber(traceFrame, traceFrame.locationInCode.startLine) }}
     </vscode-link>
     <vscode-button style="grid-area: focus" @click="() => switchToStackFrame(traceFrame.frameId)">
       highlight frame
     </vscode-button>
-    <vue-monaco-editor style="grid-area: code;" class="no-scroll" :value="traceFrame.code" theme="vs-dark"
-      :options="MONACO_EDITOR_OPTIONS" :language="traceFrame.language"
-      @mount="(editor: any) => addEditorAndSetupHighlights(editor)" />
+    <vue-monaco-editor style="grid-area: code;" class="no-scroll" :value="code" theme="vs-dark"
+      :options="MONACO_EDITOR_OPTIONS" :language="traceFrame.language" @mount="setEditor" />
   </vscode-panel-view>
 </template>
 
@@ -113,8 +163,7 @@ async function addEditorAndSetupHighlights(edit: editor.IStandaloneCodeEditor) {
   outline: 1px solid var(--vscode-panel-border);
   gap: 6px;
   grid-template-areas:
-    "path path focus"
-    "code code code";
+    " path path focus" "code code code";
   grid-template-columns: 1fr 1fr auto;
   grid-template-rows: 1fr min-content;
 }

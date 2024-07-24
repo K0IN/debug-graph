@@ -8,7 +8,7 @@ import callstack_view from "./stacktrace-frame.vue"
 import { editor, languages, Position, type IMarkdownString } from "monaco-editor";
 import { stacktraceMap, vscode } from "./main";
 import { useMonacoGlobalInit, type MonacoRefType } from "./monaco";
-import { codeOptions, DisplayMode } from "./displaymode";
+import type { Checkbox } from "@vscode/webview-ui-toolkit";
 
 const stacktrace = ref<StackTraceInfo>([]);
 let theme: MonacoTheme | undefined = undefined;
@@ -22,13 +22,12 @@ Comlink.expose({
     stacktrace.value = stackTrace;
   },
   setTheme: (newTheme: MonacoTheme) => {
+    // todo dont rpc this? https://github.com/microsoft/vscode-webview-ui-toolkit/blob/a1f078e963969ad3f6d5932f96874f1a41cda919/src/utilities/theme/applyTheme.ts#L30
     theme = newTheme;
   }
 } as ComlinkFrontendApi, getComlinkChannel());
 
 const backend = Comlink.wrap<ComlinkBackendApi>(getComlinkChannel());
-
-window.addEventListener("message", console.warn);
 
 function initGlobalMonaco(monacoRef: MonacoRefType) {
   monacoRef?.languages.registerHoverProvider('*', {
@@ -37,12 +36,9 @@ function initGlobalMonaco(monacoRef: MonacoRefType) {
       if (!callLocationInfo) {
         return { contents: [] };
       }
-
       const lineOffset = callLocationInfo.fileLocationOffset.startLine;
-      const result = await backend.hover(callLocationInfo.file, lineOffset - 1 + position.lineNumber - 1, position.column, callLocationInfo.frameId);
-      return {
-        contents: [{ value: result }].filter(Boolean) as IMarkdownString[],
-      };
+      const result = await backend.getValueForPosition(callLocationInfo.file, lineOffset - 1 + position.lineNumber - 1, position.column, callLocationInfo.frameId);
+      return { contents: [{ value: JSON.stringify(result) }].filter(Boolean) as IMarkdownString[] };
     }
   });
 
@@ -72,24 +68,21 @@ function handleSetStackFrame(stackFrameId: number) {
   backend.setFrameId(stackFrameId);
 }
 
-const selectedCodeDisplayOption = ref<DisplayMode>(parseInt(vscode.getState()?.codeDisplayMode ?? localStorage['codeDisplayMode'] ?? DisplayMode.Full));
+const denseCodeDisplayMode = ref<boolean>(vscode.getState()?.denseMode ?? localStorage['denseCodeMode'] ?? false);
 
 
-function onCodeDisplayTypeChanged(index: number) {
-  vscode.setState({ codeDisplayMode: index });
-  localStorage['codeDisplayMode'] = index;
-  console.log("onCodeDisplayTypeChanged", index);
-  selectedCodeDisplayOption.value = index;
+function setDenseCodeMode(enabled: boolean) {
+  vscode.setState({ denseMode: enabled });
+  localStorage['denseCodeMode'] = enabled;
+  denseCodeDisplayMode.value = enabled;
 }
 </script>
 
 <template>
-  <vscode-dropdown @change="(e: any) => onCodeDisplayTypeChanged(codeOptions.indexOf(e.target!.value))">
-    <vscode-option v-for="(option, index) in codeOptions" :key="option" :selected="index === selectedCodeDisplayOption">
-      {{ option }}
-    </vscode-option>
-  </vscode-dropdown>
-
+  <vscode-checkbox title="Only show code that was all ready executed" :checked="denseCodeDisplayMode"
+    @change="(e: Event) => setDenseCodeMode((e.target as Checkbox).checked)">
+    Only executed Code
+  </vscode-checkbox>
   <div v-if="stacktrace && stacktrace.length === 0">
     <p>No stacktrace available</p>
   </div>
@@ -98,7 +91,7 @@ function onCodeDisplayTypeChanged(index: number) {
     <callstack_view v-for="traceFrame in stacktrace.map((traceFrame, index) => ({ traceFrame, index }))"
       :key="traceFrame.traceFrame.code + traceFrame.traceFrame.file + traceFrame.traceFrame.locationInCode.startLine"
       :traceFrame="traceFrame.traceFrame" :theme="theme" @open-file="handleOpenFile"
-      @set-stack-frame-id="handleSetStackFrame" :displayMode="selectedCodeDisplayOption">
+      @set-stack-frame-id="handleSetStackFrame" :denseCodeMode="denseCodeDisplayMode">
     </callstack_view>
   </div>
 
