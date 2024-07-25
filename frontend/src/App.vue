@@ -41,8 +41,8 @@ function initGlobalMonaco(monacoRef: MonacoRefType) {
       }
       const lineOffset = callLocationInfo.fileLocationOffset.startLine;
       const result = await backend.getValueForPosition(callLocationInfo.file, lineOffset - 1 + position.lineNumber - 1, position.column, callLocationInfo.frameId);
-      const formattedHoverText = await generateHoverContent(result);
-      return { contents: [formattedHoverText] };
+      const contents = await generateHoverContent(result);
+      return { contents };
     }
   });
 

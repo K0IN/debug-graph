@@ -26,48 +26,27 @@ function escapeHtml(str: string): string {
     .replaceAll('"', '&quot;');
 }
 
-export async function generateHoverContent(result: ValueLookupResult): Promise<IMarkdownString> {
-  const formatVariable = (variable: VariableInfo): string => {
-    if (!variable.subVariables || variable.subVariables.length === 0) {
-      return `${variable.name}: ${variable.value}`;
-    }
+export async function generateHoverContent(result: ValueLookupResult): Promise<IMarkdownString[]> {
+  const results: IMarkdownString[] = [
+    { value: `**Expression**\n\n${result.formattedValue}` }
+  ];
 
-    const subVariables = variable.subVariables.map((subVariable) => {
-      return `<div class="variable-details">
-    <div class="summary">${subVariable.name}</div>
-    <p>${subVariable.value}</p>
-      </div>`;
-    }).join('\n');
+  const allVariablesTopLevel = result.variableInfo?.filter((v) => !v.subVariables || v.subVariables.length === 0) || [];
+  // const allVariablesSub = result.variableInfo?.filter((v) => v.subVariables && v.subVariables.length > 0) || [];
 
-    const formattedVariable = `<details class="variable-details">
-      <summary>${variable.name}</summary>
-      <p>${variable.value}</p>
-      ${subVariables}
-    </details>`;
+  if (allVariablesTopLevel.length > 0) {
+    results.push({
+      value: allVariablesTopLevel.map((v) => `${v.type ? '```' + v.type + '``` ' : ''} \`${v.name}\` => \`${v.value}\``).join('\n\n')
+    });
+  }
 
-    return formattedVariable + "<script>document.querySelectorAll('details').forEach((details) => details.addEventListener('toggle', (e) => { if (e.target.open) { e.target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });</script>";
-  };
+  // if (allVariablesSub.length > 0) {
+  //   results.push({
+  //     value: allVariablesSub.map((v) => `${v.type ? v.type + ' ' : ''}${v.name} => ${v.value}`).join('<br>\n'),
+  //     isTrusted: true,
+  //     supportHtml: true,
+  //   });
+  // }
 
-  const sortedVariables = result.variableInfo?.sort((a, b) => {
-    if (!a.subVariables && b.subVariables) {
-      return -1;
-    } else if (a.subVariables && !b.subVariables) {
-      return 1;
-    } else {
-      return 0;
-    }
-  });
-
-  const formattedLines: string[] = sortedVariables?.map(formatVariable) ?? [];
-
-  // https://stackoverflow.com/questions/67749752/how-to-apply-styling-and-html-tags-on-hover-message-with-vscode-api
-  const formattedHoverText = {
-    // <span style="color:#000;background-color:#fff;">Howdy there.</span>
-    value: formattedLines.join('<br>\n'),
-    isTrusted: true,
-    supportThemeIcons: true,
-    supportHtml: true,
-  } as IMarkdownString;
-
-  return formattedHoverText;
+  return results;
 }
