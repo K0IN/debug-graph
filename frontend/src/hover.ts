@@ -30,48 +30,49 @@ function escapeHtml(str: string): string {
 function format(variable: VariableInfo, indent = 0): string {
   const indentStr = '&nbsp;'.repeat(indent);
   let innerOutput = '';
-  if (variable.type) {
-    innerOutput += indentStr + `Type: \`${variable.type}\`\n\n`;
+  if (variable.value === '') {
+    innerOutput += indentStr + `\`${variable.name}\`\n\n`;
+  } else if (variable.type) {
+    innerOutput += indentStr + `\`${variable.type}\` \`${variable.name}\` => \`${variable.value}\`\n\n`;
+  } else {
+    innerOutput += indentStr + `\`${variable.name}\` => \`${variable.value}\`\n\n`;
   }
-  innerOutput += indentStr + `Name: \`${variable.name}\`\n\n`;
-  innerOutput += indentStr + `Value: \`${variable.value}\`\n\n`;
-
-  if (variable.subVariables) {
-    for (const subVariable of variable.subVariables) {
-      innerOutput += format(subVariable, indent + 1);
-    }
-  }
-  return innerOutput;
+  return innerOutput + '\n\n';
 }
 
 
 function showComplexValue(titles: VariableInfo[]): string {
   let output = '';
   for (const variable of titles) {
+    // output += format(variable);
     output += format(variable);
+    output += '\n\n| Name | Type | Value |\n|------|------|-------|\n';
     for (const subVariable of variable.subVariables || []) {
-      output += format(subVariable);
+      // output += format(subVariable, 1);
+      output += `| ${escapeHtml(subVariable.name)} | ${escapeHtml(subVariable.type || '')} | ${escapeHtml(subVariable.value)} |\n`;
     }
-    output += '--------------------\n';
   }
 
   return output;
 }
 
 
-export async function generateHoverContent(result: ValueLookupResult): Promise<IMarkdownString[]> {
-  const results: IMarkdownString[] = [{ value: `**Expression**\n\n${result.formattedValue}\n\n---------------------\n` }];
+export async function generateHoverContent(result?: ValueLookupResult): Promise<IMarkdownString[]> {
+  if (!result || !result.formattedValue) {
+    return [];
+  }
+  const results: IMarkdownString[] = [{ value: `** Expression **\n\n${result.formattedValue} \n\n---------------------\n` }];
 
   const allVariablesTopLevel = result.variableInfo?.filter((v) => !v.subVariables || v.subVariables.length === 0) || [];
   const allVariablesSub = result.variableInfo?.filter((v) => v.subVariables && v.subVariables.length > 0) || [];
 
   if (allVariablesTopLevel.length > 0) {
-    results.push({ value: allVariablesTopLevel.map(format).join('\n\n') + '\n---------------------\n' });
+    results.push({ value: allVariablesTopLevel.map((r) => format(r)).join('\n\n') + '\n---------------------\n' });
   }
 
   if (allVariablesSub.length > 0) {
     results.push({ value: showComplexValue(allVariablesSub) });
   }
-
+  console.log('a', results, 'for', result);
   return results;
 }
