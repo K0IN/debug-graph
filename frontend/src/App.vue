@@ -12,6 +12,7 @@ import type { Checkbox } from "@vscode/webview-ui-toolkit";
 
 const stacktrace = ref<StackTraceInfo>([]);
 const theme = shallowRef<MonacoTheme>();
+const denseCodeDisplayMode = ref<boolean>(vscode.getState()?.denseMode ?? localStorage['denseCodeMode'] ?? false);
 
 const debugMode = false;
 
@@ -28,89 +29,21 @@ Comlink.expose({
 } as ComlinkFrontendApi, getComlinkChannel());
 
 const backend = Comlink.wrap<ComlinkBackendApi>(getComlinkChannel());
+
 /*
-{
-  "type": "object",
-  "value": [
-    {
-      "name": "special variables",
-      "value": "",
-      "type": "",
-      "variablesReference": 33
-    },
-    {
-      "name": "function variables",
-      "value": "",
-      "type": "",
-      "variablesReference": 34
-    },
-    {
-      "name": "'a'",
-      "value": "1",
-      "type": "int",
-      "evaluateName": "a['a']",
-      "variablesReference": 0
-    },
-    {
-      "name": "'b'",
-      "value": "2",
-      "type": "int",
-      "evaluateName": "a['b']",
-      "variablesReference": 0
-    },
-    {
-      "name": "'c'",
-      "value": "3",
-      "type": "int",
-      "evaluateName": "a['c']",
-      "variablesReference": 0
-    },
-    {
-      "name": "len()",
-      "value": "3",
-      "type": "int",
-      "evaluateName": "len(a)",
-      "variablesReference": 0,
-      "presentationHint": {
-        "attributes": [
-          "readOnly"
-        ]
-      }
-    }
-  ]
-}
-  
-  {
-  "type": "object",
-  "value": [
-    {
-      "name": "special variables",
-      "value": "",
-      "type": "",
-      "variablesReference": 101
-    },
-    {
-      "name": "function variables",
-      "value": "",
-      "type": "",
-      "variablesReference": 102
-    },
-    {
-      "name": "a",
-      "value": "1",
-      "type": "int",
-      "evaluateName": "self.a",
-      "variablesReference": 0
-    },
-    {
-      "name": "b",
-      "value": "2",
-      "type": "int",
-      "evaluateName": "self.b",
-      "variablesReference": 0
-    }
-  ]
-}
+export type VariableInfo = {
+  name: string,
+  value: string,
+  type?: string,
+  subVariables?: VariableInfo[]
+};
+
+export type ValueLookupResult = {
+  provider: 'eval' | 'lookup';
+  formattedValue: string;
+  variableInfo?: VariableInfo[];
+};
+
 */
 function initGlobalMonaco(monacoRef: MonacoRefType) {
   monacoRef?.languages.registerHoverProvider('*', {
@@ -121,7 +54,29 @@ function initGlobalMonaco(monacoRef: MonacoRefType) {
       }
       const lineOffset = callLocationInfo.fileLocationOffset.startLine;
       const result = await backend.getValueForPosition(callLocationInfo.file, lineOffset - 1 + position.lineNumber - 1, position.column, callLocationInfo.frameId);
-      return { contents: [{ value: JSON.stringify(result) }].filter(Boolean) as IMarkdownString[] };
+
+      const formattedLines = [
+        `**${result.provider}**`,
+        `**Value:** ${result.formattedValue}`,
+        `**Variable Info:**`,
+        ...result.variableInfo?.map((variable) => {
+          const subVariables = variable.subVariables?.map((subVariable) => {
+            return `  - **${subVariable.name}** = ${subVariable.value}`;
+          }).join('\n');
+          return `- **${variable.name}** = ${variable.value}\n${subVariables}`;
+        }) ?? []
+      ];
+
+
+      const formattedHoverText = {
+        // <span style="color:#000;background-color:#fff;">Howdy there.</span>
+        value: formattedLines.join('<br>\n'),
+        isTrusted: true,
+        supportThemeIcons: true,
+        supportHtml: true,
+      } as IMarkdownString;
+
+      return { contents: [formattedHoverText] };
     }
   });
 
@@ -150,15 +105,11 @@ function handleSetStackFrame(stackFrameId: number) {
   backend.setFrameId(stackFrameId);
 }
 
-const denseCodeDisplayMode = ref<boolean>(vscode.getState()?.denseMode ?? localStorage['denseCodeMode'] ?? false);
-
-
 function setDenseCodeMode(enabled: boolean) {
   vscode.setState({ denseMode: enabled });
   localStorage['denseCodeMode'] = enabled;
   denseCodeDisplayMode.value = enabled;
 }
-
 </script>
 
 <template>
@@ -167,8 +118,8 @@ function setDenseCodeMode(enabled: boolean) {
     Only show executed Code
   </vscode-checkbox>
 
-  <div v-if="stacktrace && stacktrace.length === 0">
-    <p>No stacktrace available</p>
+  <div v-if="stacktrace && stacktrace.length === 0" class="center">
+    <p>No stacktrace available. Start a debug session, to see your stacktrace here.</p>
   </div>
 
   <div class="list">
@@ -188,6 +139,12 @@ function setDenseCodeMode(enabled: boolean) {
 </template>
 
 <style scoped>
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .list {
   display: flex;
   flex-direction: column;

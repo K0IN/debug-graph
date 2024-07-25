@@ -32,10 +32,17 @@ export type MonacoTheme = {
 };
 
 
-export type ValueLookupResult = {
+export type VariableInfo = {
+  name: string,
+  value: string,
   type?: string,
-  value?: any, // don't know
-  inner?: ValueLookupResult[] // sub values
+  subVariables?: VariableInfo[]
+};
+
+export type ValueLookupResult = {
+  provider: 'eval' | 'lookup';
+  formattedValue: string;
+  variableInfo?: VariableInfo[];
 };
 
 export type ComlinkFrontendApi = {

@@ -36,8 +36,7 @@
           "dark": "assets/ui-hint.svg",
           "light": "assets/ui-hint.svg"
         },
-        "shortTitle": "Call Graph",
-        "enablement": "inDebugMode"
+        "shortTitle": "Call Graph"
       }
     ],
     "menus": {
@@ -50,11 +49,6 @@
       ]
     }
   },
-  "afiles": [
-    "dist/",
-    "frontend/dist/",
-    "frontend/dist/assets/"
-  ],
   "scripts": {
     "vscode:prepublish": "npm run compile-frontend && npm run package",
     "compile": "npm run compile-frontend && webpack",

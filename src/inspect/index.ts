@@ -8,5 +8,6 @@ export async function getCurrentValueForPosition(uri: Uri, line: number, column:
   if (evalValue) {
     return evalValue;
   }
-  return await getValueWithLookupMethod(uri, line, column, frameId).catch(e => undefined);
+  const lookupValue = await getValueWithLookupMethod(uri, line, column, frameId).catch(e => undefined);
+  return lookupValue;
 }

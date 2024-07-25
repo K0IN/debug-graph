@@ -1,6 +1,6 @@
 import { ValueLookupResult } from "shared/src";
 import { Uri, Position, debug, workspace, DebugSession, window } from "vscode";
-import { callDebugFunction } from "./typed-debug";
+import { callDebugFunction, getVariablesRecursive } from "./typed-debug";
 
 export async function getValueWithLookupMethod(uri: Uri, line: number, column: number, frameId: number): Promise<ValueLookupResult> {
   const debugSession = debug.activeDebugSession;
@@ -20,7 +20,7 @@ export async function getValueWithLookupMethod(uri: Uri, line: number, column: n
 }
 
 async function inspectVariableAtPosition(
-  session: DebugSession,
+  _session: DebugSession,
   _uri: Uri,
   _position: Position,
   variableName: string, frameId: number
@@ -38,7 +38,11 @@ async function inspectVariableAtPosition(
     const variable = variablesResponse.variables.find((v: any) => v.name === variableName);
 
     if (variable) {
-      return variable;
+      return {
+        provider: 'lookup',
+        formattedValue: variable.value,
+        variableInfo: await getVariablesRecursive(variable.variablesReference)
+      };
     }
   }
 
