@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { StackTraceInfo, ComlinkFrontendApi, MonacoTheme, ComlinkBackendApi } from "shared/src/index";
+import type { StackTraceInfo, ComlinkFrontendApi, MonacoTheme, ComlinkBackendApi, VariableInfo } from "shared/src/index";
 import { nextTick, ref, shallowRef } from "vue";
 import type { } from "vscode-webview";
 import * as Comlink from "comlink/dist/esm/comlink";
@@ -9,6 +9,7 @@ import { editor, languages, Position, type IMarkdownString } from "monaco-editor
 import { stacktraceMap, vscode } from "./main";
 import { useMonacoGlobalInit, type MonacoRefType } from "./monaco";
 import type { Checkbox } from "@vscode/webview-ui-toolkit";
+import { generateHoverContent } from "./hover";
 
 const stacktrace = ref<StackTraceInfo>([]);
 const theme = shallowRef<MonacoTheme>();
@@ -30,21 +31,7 @@ Comlink.expose({
 
 const backend = Comlink.wrap<ComlinkBackendApi>(getComlinkChannel());
 
-/*
-export type VariableInfo = {
-  name: string,
-  value: string,
-  type?: string,
-  subVariables?: VariableInfo[]
-};
 
-export type ValueLookupResult = {
-  provider: 'eval' | 'lookup';
-  formattedValue: string;
-  variableInfo?: VariableInfo[];
-};
-
-*/
 function initGlobalMonaco(monacoRef: MonacoRefType) {
   monacoRef?.languages.registerHoverProvider('*', {
     provideHover: async (model: editor.ITextModel, position: Position, _token: /* CancellationToken */ any, _context?: languages.HoverContext<languages.Hover> | undefined): Promise<languages.Hover> => {
@@ -54,28 +41,7 @@ function initGlobalMonaco(monacoRef: MonacoRefType) {
       }
       const lineOffset = callLocationInfo.fileLocationOffset.startLine;
       const result = await backend.getValueForPosition(callLocationInfo.file, lineOffset - 1 + position.lineNumber - 1, position.column, callLocationInfo.frameId);
-
-      const formattedLines = [
-        `**${result.provider}**`,
-        `**Value:** ${result.formattedValue}`,
-        `**Variable Info:**`,
-        ...result.variableInfo?.map((variable) => {
-          const subVariables = variable.subVariables?.map((subVariable) => {
-            return `  - **${subVariable.name}** = ${subVariable.value}`;
-          }).join('\n');
-          return `- **${variable.name}** = ${variable.value}\n${subVariables}`;
-        }) ?? []
-      ];
-
-
-      const formattedHoverText = {
-        // <span style="color:#000;background-color:#fff;">Howdy there.</span>
-        value: formattedLines.join('<br>\n'),
-        isTrusted: true,
-        supportThemeIcons: true,
-        supportHtml: true,
-      } as IMarkdownString;
-
+      const formattedHoverText = await generateHoverContent(result);
       return { contents: [formattedHoverText] };
     }
   });
