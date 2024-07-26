@@ -73,7 +73,7 @@ async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLoc
   if (!frame.source?.path) {
     throw new Error("No source path found for frame");
   }
-  const file = Uri.file(frame.source.path);
+  const file = Uri.parse(frame.source.path);
   const zeroIndexedLine = frame.line - 1;
   const noFunctionLookupSize = 3;
 

@@ -38,13 +38,6 @@ export async function activate(context: ExtensionContext) {
     }
   });
 
-  function disposeRpcChannel() {
-    if (currentFrontendRpcChannel) {
-      currentFrontendRpcChannel[Comlink.releaseProxy]();
-      currentFrontendRpcChannel = undefined;
-    }
-  }
-
   commands.registerCommand('call-graph.show-call-graph', async () => {
     try {
       if (!currentPanel?.webview) {
@@ -63,11 +56,9 @@ export async function activate(context: ExtensionContext) {
 
       currentPanel.onDidDispose(() => {
         currentPanel = undefined;
-        disposeRpcChannel();
       });
 
       // release current channel if needed
-      disposeRpcChannel();
 
       currentFrontendRpcChannel = Comlink.wrap<ComlinkFrontendApi>(getComlinkChannel(currentPanel.webview, context));
 
