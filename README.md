@@ -15,10 +15,13 @@ Although, i have only tested:
 * Python
 * JavaScript
 * TypeScript
+
+<!-- more testing needed 
 * c#
 * c++
 * c
 * Java (limited)
+-->
 
 ## Extension Settings
 
