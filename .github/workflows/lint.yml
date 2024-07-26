@@ -37,6 +37,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - run: apt update && apt install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2 libx11-xcb1
+        name: install virtual display
+      - run: Xvfb -ac :99 -screen 0 1280x1024x16 & export DISPLAY=:99
       - run: npm install
       - run: npm install
         working-directory: ./frontend
