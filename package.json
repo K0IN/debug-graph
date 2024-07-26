@@ -51,6 +51,10 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile-frontend && npm run package",
+    "vscode:bundle": "npm run package && vsce package",
+    "vscode:install": "npm run bundle && code --install-extension call-graph-0.0.1.vsix",
+    "vscode:uninstall": "npm run uninstall-extension",
+    "vscode:publish": "npm run bundle && vsce publish",
     "compile": "npm run compile-frontend && webpack",
     "watch": "npm run compile-frontend && webpack --watch",
     "package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map",
@@ -62,9 +66,7 @@
     "test": "vscode-test",
     "compile-frontend": "cd frontend && npm run build",
     "build": "npm run compile",
-    "bundle": "npm run package && vsce package",
     "install": "npm i && cd frontend && npm i",
-    "install-extension": "npm run bundle && code --install-extension call-graph-0.0.1.vsix",
     "uninstall-extension": "code --uninstall k0in.call-graph"
   },
   "devDependencies": {
