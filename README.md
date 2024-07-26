@@ -20,7 +20,7 @@ This extension is designed to work with **all languages** supported by Visual St
 ## 🛠️ How to Get Started
 
 1. Set a breakpoint in your code.
-2. Click on the `Call Graph` icon in the top bar of your editor.
+2. Click on the `Call Graph` icon in the top bar of your editor (only visible while debugging).
 3. Explore the variables and trace the origin of your execution.
 
 ## 📥 How to Install
