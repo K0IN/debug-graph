@@ -1,0 +1,44 @@
+name: Deploy Extension
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm run install-deps
+
+      - name: Bump version to match tag
+        run: |
+          echo "Bumping version to match tag ${{ github.ref }}"
+          TAG_VERSION=${GITHUB_REF##*/}
+          npm version $TAG_VERSION --no-git-tag-version
+
+      - name: Build and Package
+        run: npm run vscode:bundle
+
+      - name: Publish to VSCode Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VS_TOKEN }} # Use the marketplace token stored in GitHub Secrets
+        run: npm run vscode:publish
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.vsix" # Uploads files ending with .vsix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub Actions
