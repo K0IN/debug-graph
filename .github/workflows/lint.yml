@@ -13,7 +13,7 @@ jobs:
       - run: npm install
       - run: npm install
         working-directory: ./frontend
-      - run: npm run lint-vscode
+      - run: npm run lint
         name: Lint VSCode
       - run: npm run lint-frontend
         name: Lint Frontend
@@ -28,7 +28,7 @@ jobs:
       - run: npm install
       - run: npm install
         working-directory: ./frontend
-      - run: npm run package
+      - run: npm run vscode:bundle
 
   test:
     runs-on: ubuntu-latest
