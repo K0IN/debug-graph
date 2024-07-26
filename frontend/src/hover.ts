@@ -48,6 +48,6 @@ export async function generateHoverContent(result?: ValueLookupResult): Promise<
   if (allVariablesSub.length > 0) {
     results.push({ value: showComplexValue(allVariablesSub), supportHtml: true });
   }
-  console.log('a', results, 'for', result);
+
   return results;
 }
