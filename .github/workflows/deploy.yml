@@ -34,11 +34,3 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VS_TOKEN }} # Use the marketplace token stored in GitHub Secrets
         run: npm run vscode:publish
-
-      - name: Create GitHub Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: "*.vsix" # Uploads files ending with .vsix
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub Actions
