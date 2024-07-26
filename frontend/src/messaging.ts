@@ -3,8 +3,8 @@ import { vscode } from "./main";
 
 export function getComlinkChannel(): Endpoint {
   return {
-    addEventListener: (type: string, listener: any) => window.addEventListener(type, listener),
-    removeEventListener: () => { }, // todo  window.removeEventListener
-    postMessage: (object: any) => vscode.postMessage(object),
+    addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => window.addEventListener(type, listener),
+    removeEventListener: (type: string, listener: EventListenerOrEventListenerObject, _options?: {}) => window.removeEventListener(type, listener),
+    postMessage: (object: unknown) => vscode.postMessage(object),
   };
 }

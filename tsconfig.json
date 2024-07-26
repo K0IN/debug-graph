@@ -23,5 +23,8 @@
     "frontend/**/*", // Exclude the inner project
     "shared/**/*", // Exclude the shared project 
     "node_modules"
+  ],
+  "include": [
+    "src/**/*"
   ]
 }

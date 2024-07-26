@@ -1,4 +1,4 @@
-import { commands, debug, ExtensionContext, Webview, WebviewPanel, window, workspace } from 'vscode';
+import { commands, debug, ExtensionContext, WebviewPanel, window, workspace } from 'vscode';
 import { ComlinkFrontendApi } from 'shared/src/index';
 import { getMonacoTheme } from './webview/themes';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
@@ -9,7 +9,7 @@ import { FrontendApi } from './debug/frontend-functions';
 
 let currentFrontendRpcChannel: Comlink.Remote<ComlinkFrontendApi> | undefined = undefined;
 
-async function updateViewWithStackTrace(_webview: Webview, _context: ExtensionContext) {
+async function updateViewWithStackTrace() {
   try {
     if (!currentFrontendRpcChannel) {
       throw new Error("No rpc channel found");
@@ -17,32 +17,19 @@ async function updateViewWithStackTrace(_webview: Webview, _context: ExtensionCo
     const result = await getStacktraceInfo();
     await currentFrontendRpcChannel.setStackTrace(result);
   } catch (e: unknown) {
-    // todo remove in release build!
     window.showErrorMessage("failed to load stacktrace, due to error, please try to open view again. Error: " + e);
   }
 }
 
+
 export async function activate(context: ExtensionContext) {
   let currentPanel: WebviewPanel | undefined = undefined;
   // started debug session
-  context.subscriptions.push(debug.onDidStartDebugSession(async (e) => {
-    if (currentPanel?.webview) {
-      await updateViewWithStackTrace(currentPanel.webview, context);
-    }
-  }));
-
+  context.subscriptions.push(debug.onDidStartDebugSession(updateViewWithStackTrace));
   // step into, step out, step over, change active stack item, change active debug session, receive custom event
-  context.subscriptions.push(debug.onDidChangeActiveStackItem(async (e) => {
-    if (currentPanel?.webview) {
-      await updateViewWithStackTrace(currentPanel.webview, context);
-    }
-  }));
-
-  context.subscriptions.push(debug.onDidChangeActiveDebugSession(async (e) => {
-    if (currentPanel?.webview) {
-      await updateViewWithStackTrace(currentPanel.webview, context);
-    }
-  }));
+  context.subscriptions.push(debug.onDidChangeActiveStackItem(updateViewWithStackTrace));
+  // stopped/started/changed debug session
+  context.subscriptions.push(debug.onDidChangeActiveDebugSession(updateViewWithStackTrace));
 
   workspace.onDidChangeConfiguration(async event => {
     if (event.affectsConfiguration('workbench.colorTheme')) {
@@ -50,6 +37,13 @@ export async function activate(context: ExtensionContext) {
       await currentFrontendRpcChannel?.setTheme(theme);
     }
   });
+
+  function disposeRpcChannel() {
+    if (currentFrontendRpcChannel) {
+      currentFrontendRpcChannel[Comlink.releaseProxy]();
+      currentFrontendRpcChannel = undefined;
+    }
+  }
 
   commands.registerCommand('call-graph.show-call-graph', async () => {
     try {
@@ -69,17 +63,11 @@ export async function activate(context: ExtensionContext) {
 
       currentPanel.onDidDispose(() => {
         currentPanel = undefined;
-        if (currentFrontendRpcChannel) {
-          currentFrontendRpcChannel[Comlink.releaseProxy]();
-        }
-        currentFrontendRpcChannel = undefined;
+        disposeRpcChannel();
       });
 
       // release current channel if needed
-      if (currentFrontendRpcChannel) {
-        currentFrontendRpcChannel[Comlink.releaseProxy]();
-        currentFrontendRpcChannel = undefined;
-      }
+      disposeRpcChannel();
 
       currentFrontendRpcChannel = Comlink.wrap<ComlinkFrontendApi>(getComlinkChannel(currentPanel.webview, context));
 
@@ -88,7 +76,7 @@ export async function activate(context: ExtensionContext) {
 
 
       if (debug.activeDebugSession) {
-        await updateViewWithStackTrace(currentPanel.webview, context);
+        await updateViewWithStackTrace();
       } else {
         window.showWarningMessage('No active debug session, the view will automatically update when a debug session is started');
       }
@@ -99,7 +87,7 @@ export async function activate(context: ExtensionContext) {
 
 
   window.registerWebviewPanelSerializer('graph-visualization', {
-    deserializeWebviewPanel: async function (webviewPanel: WebviewPanel, state: unknown): Promise<void> {
+    deserializeWebviewPanel: async (webviewPanel: WebviewPanel, _state: unknown) => {
       currentPanel = webviewPanel;
       await commands.executeCommand('call-graph.show-call-graph');
     }

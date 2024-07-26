@@ -38,18 +38,6 @@ async function findSymbolForLine(file: Uri, zeroIndexedLine: number) {
 }
 
 
-async function convertScriptLineNumberToFunctionLineNumber(file: Uri, zeroIndexedFileLineNumber: number): Promise<number> {
-  const documentSymbols = await findSymbolForLine(file, zeroIndexedFileLineNumber);
-  if (!documentSymbols) {
-    return zeroIndexedFileLineNumber;
-  }
-  const filteredBySymbolType = documentSymbols.filter(symbol => symbol.kind === SymbolKind.Function || symbol.kind === SymbolKind.Method || symbol.kind === SymbolKind.Constructor);
-  const hasCorrection = filteredBySymbolType.length > 0;
-  const correctedLine = hasCorrection ? (zeroIndexedFileLineNumber - filteredBySymbolType[0].range.start.line) : zeroIndexedFileLineNumber;
-  return correctedLine;
-}
-
-
 async function getFunctionLocation(file: Uri, name: string, zeroIndexedLine: number): Promise<Range> {
   const documentSymbols = await findSymbolForLine(file, zeroIndexedLine);
   const allFunctions = documentSymbols
@@ -125,5 +113,5 @@ async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLoc
 
 export async function getStacktraceInfo(): Promise<StackTraceInfo> {
   const stackFrames = await callDebugFunction('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1 });
-  return await Promise.all(stackFrames.stackFrames.map((frame, index) => getCallLocation(frame)));
+  return await Promise.all(stackFrames.stackFrames.map((frame) => getCallLocation(frame)));
 }

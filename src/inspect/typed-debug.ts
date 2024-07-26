@@ -17,12 +17,12 @@ export async function getVariablesRecursive(variableRef: number, maxRecursion = 
   if (maxRecursion <= 0) {
     return [];
   }
-  const variablesResponse = await callDebugFunction('variables', { variablesReference: variableRef }).catch(e => ({ variables: [] }));
+  const variablesResponse = await callDebugFunction('variables', { variablesReference: variableRef }).catch(() => ({ variables: [] }));
   const results = await Promise.all(variablesResponse.variables.map(async (variable) => ({
     name: variable.name,
     value: variable.value,
     type: variable.type,
-    subVariables: await getVariablesRecursive(variable.variablesReference, maxRecursion - 1).catch(e => [])
+    subVariables: await getVariablesRecursive(variable.variablesReference, maxRecursion - 1).catch(() => [])
   } as VariableInfo)));
   return results;
 }

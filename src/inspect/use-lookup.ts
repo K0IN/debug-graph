@@ -1,5 +1,5 @@
 import { ValueLookupResult } from "shared/src";
-import { Uri, Position, debug, workspace, DebugSession, window } from "vscode";
+import { Uri, Position, debug, workspace, DebugSession } from "vscode";
 import { callDebugFunction, getVariablesRecursive } from "./typed-debug";
 
 export async function getValueWithLookupMethod(uri: Uri, line: number, column: number, frameId: number): Promise<ValueLookupResult> {
