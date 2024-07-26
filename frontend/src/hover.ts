@@ -1,58 +1,33 @@
 import type { IMarkdownString } from "monaco-editor";
 import type { ValueLookupResult, VariableInfo } from "shared/src";
 
-/*
-export type VariableInfo = {
-  name: string,
-  value: string,
-  type?: string,
-  subVariables?: VariableInfo[]
-};
-
-export type ValueLookupResult = {
-  provider: 'eval' | 'lookup';
-  formattedValue: string;
-  variableInfo?: VariableInfo[];
-};
-
-*/
-
-function escapeHtml(str: string): string {
-  return (str as any)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll("'", '&#39;')
-    .replaceAll('"', '&quot;');
+function escapeHtml(unsafe: string): string {
+  return unsafe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 
 function format(variable: VariableInfo, indent = 0): string {
   const indentStr = '&nbsp;'.repeat(indent);
-  let innerOutput = '';
   if (variable.value === '') {
-    innerOutput += indentStr + `\`${variable.name}\`\n\n`;
+    return indentStr + `\`${variable.name}\``;
   } else if (variable.type) {
-    innerOutput += indentStr + `\`${variable.type}\` \`${variable.name}\` => \`${variable.value}\`\n\n`;
+    return indentStr + `\`${variable.type}\` \`${variable.name}\` => \`${variable.value}\``;
   } else {
-    innerOutput += indentStr + `\`${variable.name}\` => \`${variable.value}\`\n\n`;
+    return indentStr + `\`${variable.name}\` => \`${variable.value}\``;
   }
-  return innerOutput + '\n\n';
 }
 
 
 function showComplexValue(titles: VariableInfo[]): string {
-  let output = '';
+  let output = '<table>';
   for (const variable of titles) {
-    // output += format(variable);
-    output += format(variable);
-    output += '\n\n| Name | Type | Value |\n|------|------|-------|\n';
+    output += `<tr><th colspan="3">${escapeHtml(variable.name)}</th></tr>`;
+    output += '<tr><th>Name</th><th>Type</th><th >Value</th></tr>';
     for (const subVariable of variable.subVariables || []) {
-      // output += format(subVariable, 1);
-      output += `| ${escapeHtml(subVariable.name)} | ${escapeHtml(subVariable.type || '')} | ${escapeHtml(subVariable.value)} |\n`;
+      output += `<tr><td>${escapeHtml(subVariable.name)}</td><td >${escapeHtml(subVariable.type || '')}</td><td>${escapeHtml(subVariable.value)}</td></tr>`;
     }
   }
-
+  output += '</table>';
   return output;
 }
 
@@ -61,17 +36,17 @@ export async function generateHoverContent(result?: ValueLookupResult): Promise<
   if (!result || !result.formattedValue) {
     return [];
   }
-  const results: IMarkdownString[] = [{ value: `** Expression **\n\n${result.formattedValue} \n\n---------------------\n` }];
+  const results: IMarkdownString[] = [{ value: `${result.formattedValue}\n\n---------------------\n\n` }];
 
   const allVariablesTopLevel = result.variableInfo?.filter((v) => !v.subVariables || v.subVariables.length === 0) || [];
   const allVariablesSub = result.variableInfo?.filter((v) => v.subVariables && v.subVariables.length > 0) || [];
 
   if (allVariablesTopLevel.length > 0) {
-    results.push({ value: allVariablesTopLevel.map((r) => format(r)).join('\n\n') + '\n---------------------\n' });
+    results.push({ value: allVariablesTopLevel.map((r) => format(r)).join('\n\n') + '\n\n---------------------\n\n' });
   }
 
   if (allVariablesSub.length > 0) {
-    results.push({ value: showComplexValue(allVariablesSub) });
+    results.push({ value: showComplexValue(allVariablesSub), supportHtml: true });
   }
   console.log('a', results, 'for', result);
   return results;
