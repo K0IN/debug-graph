@@ -1,4 +1,4 @@
-# call-graph README
+# Debug graph
 
 A Visual Studio Code extension that shows all the function calls (code paths) that lead to a breakpoint.
 
@@ -23,13 +23,19 @@ Although, i have only tested:
 * Java (limited)
 -->
 
-## Extension Settings
+## How to get started
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+1. Set a breakpoint in your code
+2. Click on the `Call Graph` icon in the top bar of your editor
+3. See what variables are and where you are coming from
 
-For example:
+## How to install
 
-This extension contributes the following settings:
+1. Open Visual Studio Code
+2. Go to the Extensions view by clicking on the square icon in the sidebar
+3. Search for `Call Graph`
+4. Click on the Install button
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## Known Issues
+
+* Sometimes the theme colors are not matched to vscode theme, this resolves when opening the call graph again

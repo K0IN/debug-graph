@@ -17,3 +17,4 @@ test_code/
 shared/
 .docs/
 !frontend/dist/**
+!.docs/**

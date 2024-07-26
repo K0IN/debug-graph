@@ -1,8 +1,9 @@
 {
-  "name": "call-graph",
-  "displayName": "call-graph",
+  "name": "debug-graph",
+  "displayName": "debug-graph",
   "description": "A Visual Studio Code extension that shows all the function calls (code paths) that lead to a breakpoint.",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "icon": "assets/ui-hint.png",
   "licenses": [
     {
       "url": "https://github.com/K0IN/stacktrace-history/LICENSE",
@@ -50,11 +51,11 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile-all && npm run vscode:package",
+    "vscode:prepublish": "npm run vscode:package",
+    "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map",
     "vscode:bundle": "npm run vscode:package && vsce package",
     "vscode:install": "npm run vscode:bundle && code --install-extension call-graph-0.0.1.vsix",
     "vscode:uninstall": "code --uninstall k0in.call-graph",
-    "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map",
     "vscode:publish": "npm run vscode:bundle && vsce publish",
     "lint-frontend": "cd frontend && npm run lint",
     "compile-frontend": "cd frontend && npm run build",
