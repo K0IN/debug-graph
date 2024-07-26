@@ -4,6 +4,7 @@ import { CallLocation, StackTraceInfo } from "shared/src/index";
 import { callDebugFunction } from "../inspect/typed-debug";
 import { DebugProtocol } from "@vscode/debugprotocol";
 
+
 async function getAllSubnodesForSymbol(symbol: DocumentSymbol) {
   const symbols: DocumentSymbol[] = [];
   if (symbol.children) {
@@ -69,11 +70,7 @@ async function getLanguageForFile(file: Uri) {
 }
 
 
-async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLocation> {
-  if (!frame.source?.path) {
-    throw new Error("No source path found for frame");
-  }
-  const file = Uri.parse(frame.source.path);
+async function tryGetCallLocation(file: Uri, frame: DebugProtocol.StackFrame) {
   const zeroIndexedLine = frame.line - 1;
   const noFunctionLookupSize = 3;
 
@@ -83,7 +80,7 @@ async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLoc
 
   const code = symbolLocation
     ? await getCodeAtRange(file, symbolLocation)
-    : await getCodeAtRange(file, new Range(zeroIndexedLine - noFunctionLookupSize, 0, zeroIndexedLine + noFunctionLookupSize, 99999));
+    : await getCodeAtRange(file, new Range(Math.max(zeroIndexedLine - noFunctionLookupSize, 0), 0, zeroIndexedLine + noFunctionLookupSize, 99999));
 
   const line = code
     ? (symbolLocation
@@ -108,6 +105,21 @@ async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLoc
       startCharacter: 0,
     }
   };
+}
+
+
+async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLocation> {
+  if (!frame.source?.path) {
+    throw new Error("No source path found for frame");
+  }
+
+  try {
+    const file = Uri.parse(frame.source.path);
+    return await tryGetCallLocation(file, frame);
+  } catch (e) { }
+
+  const file = Uri.file(frame.source.path);
+  return await tryGetCallLocation(file, frame);
 }
 
 

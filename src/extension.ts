@@ -5,7 +5,7 @@ import { createWebview, getVueFrontendPanelContent } from './webview/content';
 import * as Comlink from "comlink/dist/esm/comlink";
 import { getComlinkChannel } from './webview/messaging';
 import { getStacktraceInfo } from './debug/callstack-extractor';
-import { FrontendApi } from './debug/frontend-functions';
+import { FrontendApi } from './frontend-functions';
 
 let currentFrontendRpcChannel: Comlink.Remote<ComlinkFrontendApi> | undefined = undefined;
 

@@ -1,6 +1,6 @@
 import { ComlinkBackendApi } from "shared/src";
 import { commands, debug, DebugStackFrame, Selection, TextEditorRevealType, Uri, window, workspace } from "vscode";
-import { getCurrentValueForPosition } from "../inspect";
+import { getCurrentValueForPosition } from "./inspect";
 
 async function showFile(path: string, line: number) {
   try {
