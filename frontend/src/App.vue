@@ -13,9 +13,7 @@ import { generateHoverContent } from "./hover";
 
 const stacktrace = ref<StackTraceInfo>([]);
 const theme = shallowRef<MonacoTheme>();
-const denseCodeDisplayMode = ref<boolean>(vscode.getState()?.denseMode ?? localStorage['denseCodeMode'] ?? false);
-
-const debugMode = false;
+const denseCodeDisplayMode = ref<boolean>(vscode.getState()?.denseMode ?? localStorage['denseCodeMode'] === "true" ?? false);
 
 Comlink.expose({
   setStackTrace: async (stackTrace: StackTraceInfo) => {
@@ -73,7 +71,7 @@ function handleSetStackFrame(stackFrameId: number) {
 
 function setDenseCodeMode(enabled: boolean) {
   vscode.setState({ denseMode: enabled });
-  localStorage['denseCodeMode'] = enabled;
+  localStorage['denseCodeMode'] = enabled.toString();
   denseCodeDisplayMode.value = enabled;
 }
 </script>
@@ -94,13 +92,6 @@ function setDenseCodeMode(enabled: boolean) {
       :traceFrame="traceFrame.traceFrame" :theme="theme" @open-file="handleOpenFile"
       @set-stack-frame-id="handleSetStackFrame" :denseCodeMode="denseCodeDisplayMode">
     </callstack_view>
-  </div>
-
-  <!-- debug show all stacktrace raw data-->
-  <div v-if="debugMode">
-    <p v-for="traceFrame in stacktrace" :key="traceFrame.code + traceFrame.file + traceFrame.locationInCode.startLine">
-      {{ JSON.stringify(traceFrame) }}
-    </p>
   </div>
 </template>
 
