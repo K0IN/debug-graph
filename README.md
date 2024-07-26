@@ -12,10 +12,15 @@ This extension is designed to work with **all languages** supported by Visual St
 
 - Go
 - Python
-- JavaScript
-- TypeScript
+- JavaScript (Node.js)
+- TypeScript (Deno)
+- C++ (GDB)
+- C (GDB)
+- Rust (lldb)
 
-> More testing is planned for additional languages such as C#, C++, C, and Java.
+All test projects can be found in the [test_code](./test_code) directory.
+
+> More testing is planned for additional languages such as C#, C, and Java.
 
 ## 🛠️ How to Get Started
 

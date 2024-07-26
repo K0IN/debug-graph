@@ -108,9 +108,9 @@ async function tryGetCallLocation(file: Uri, frame: DebugProtocol.StackFrame) {
 }
 
 
-async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLocation> {
+async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLocation | undefined> {
   if (!frame.source?.path) {
-    throw new Error("No source path found for frame");
+    return undefined;
   }
 
   try {
@@ -125,5 +125,7 @@ async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLoc
 
 export async function getStacktraceInfo(): Promise<StackTraceInfo> {
   const stackFrames = await callDebugFunction('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1 });
-  return await Promise.all(stackFrames.stackFrames.map((frame) => getCallLocation(frame)));
+  const callLocations = stackFrames.stackFrames.map((frame) => getCallLocation(frame));
+  const allResults = await Promise.all(callLocations);
+  return allResults.filter(Boolean) as CallLocation[];
 }
