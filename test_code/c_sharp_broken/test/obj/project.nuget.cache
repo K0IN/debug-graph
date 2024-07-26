@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "KFVGCblSww7YxOLCXpEPzv0sfX9vEf8hH0y2sEA/V0MCi+aXyWlyQSvZysRSY7RTa2L+hqGHqBVm4rmIFMJEYQ==",
+  "success": true,
+  "projectFilePath": "/mnt/e/src/stacktrace-history/test_code/broken_c_sharp/test/test.csproj",
+  "expectedPackageFiles": [
+    "/home/k0in/.nuget/packages/microsoft.netcore.app.ref/6.0.32/microsoft.netcore.app.ref.6.0.32.nupkg.sha512",
+    "/home/k0in/.nuget/packages/microsoft.aspnetcore.app.ref/6.0.32/microsoft.aspnetcore.app.ref.6.0.32.nupkg.sha512",
+    "/home/k0in/.nuget/packages/microsoft.netcore.app.host.linux-x64/6.0.32/microsoft.netcore.app.host.linux-x64.6.0.32.nupkg.sha512"
+  ],
+  "logs": []
+}
