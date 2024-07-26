@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { StackTraceInfo, ComlinkFrontendApi, MonacoTheme, ComlinkBackendApi, VariableInfo } from "shared/src/index";
+import type { StackTraceInfo, ComlinkFrontendApi, MonacoTheme, ComlinkBackendApi } from "shared/src/index";
 import { nextTick, ref, shallowRef } from "vue";
 import type { } from "vscode-webview";
 import * as Comlink from "comlink/dist/esm/comlink";
 import { getComlinkChannel } from "./messaging";
 import callstack_view from "./stacktrace-frame.vue"
-import { editor, languages, Position, type IMarkdownString } from "monaco-editor";
+import { editor, languages, Position } from "monaco-editor";
 import { stacktraceMap, vscode } from "./main";
 import { useMonacoGlobalInit, type MonacoRefType } from "./monaco";
 import type { Checkbox } from "@vscode/webview-ui-toolkit";
@@ -39,7 +39,7 @@ function initGlobalMonaco(monacoRef: MonacoRefType) {
       if (!callLocationInfo) {
         return { contents: [] };
       }
-      const lineOffset = callLocationInfo.fileLocationOffset.startLine;
+      const lineOffset = callLocationInfo.fileLocationOffset.startLine; // offset from the start of the file
       const result = await backend.getValueForPosition(callLocationInfo.file, lineOffset - 1 + position.lineNumber - 1, position.column, callLocationInfo.frameId);
       const contents = await generateHoverContent(result);
       return { contents };

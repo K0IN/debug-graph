@@ -6,44 +6,39 @@ import { callDebugFunction, getVariablesRecursive } from "./typed-debug";
 
 export async function getValueWithEvalMethod(uri: Uri, line: number, column: number, frameId: number): Promise<ValueLookupResult> {
   const activeDebugSession = debug.activeDebugSession;
-
   if (!activeDebugSession) {
     throw new Error('No active debug session');
   }
 
   const document = await workspace.openTextDocument(uri);
   const position = new Position(line, column);
-  let range = document.getWordRangeAtPosition(position);
+  const range = document.getWordRangeAtPosition(position);
 
   if (!range) {
     throw new Error('No variable at the specified position');
   }
 
-  let variableName = document.getText(range);
-  let text = document.lineAt(line).text;
-  let start = range.start.character;
-  let end = range.end.character;
+  const variableName = document.getText(range);
+  const text = document.lineAt(line).text;
 
-  // Expand to the left
-  while (start > 0 && (/\w|\.|\[|\]|\'\"'/.test(text[start - 1]))) {
+  let start = range.start.character;
+  while (start > 0 && /\w|\.|\[|\]|\'\"'/.test(text[start - 1])) {
     start--;
   }
 
-  // Expand to the right
-  while (end < text.length && (/\w\'\"'/.test(text[end]))) {
+  let end = range.end.character;
+  while (end < text.length && /\w\'\"'/.test(text[end])) {
     end++;
   }
 
-  variableName = text.slice(start, end);
-
-  // Use the 'evaluate' request to get the variable value
-  const result = await callDebugFunction('evaluate', { expression: variableName, frameId: frameId, context: 'hover' });
+  const expression = text.slice(start, end);
+  const result = await callDebugFunction('evaluate', { expression, frameId, context: 'hover' });
 
   if (result.variablesReference) {
     return {
       provider: "eval",
       formattedValue: result.result,
-      variableInfo: await getVariablesRecursive(result.variablesReference)
+      variableInfo: await getVariablesRecursive(result.variablesReference, 2)
     };
   }
 

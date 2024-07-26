@@ -19,15 +19,15 @@ function format(variable: VariableInfo, indent = 0): string {
 
 
 function showComplexValue(titles: VariableInfo[]): string {
-  let output = '<table>';
+  let output = '';
   for (const variable of titles) {
-    output += `<tr><th colspan="3">${escapeHtml(variable.name)}</th></tr>`;
-    output += '<tr><th>Name</th><th>Type</th><th >Value</th></tr>';
+    output += `<h3>${escapeHtml(variable.name)}</h3>`;
+    output += '<table><tr><th>Name</th><th>Type</th><th >Value</th></tr>';
     for (const subVariable of variable.subVariables || []) {
       output += `<tr><td>${escapeHtml(subVariable.name)}</td><td >${escapeHtml(subVariable.type || '')}</td><td>${escapeHtml(subVariable.value)}</td></tr>`;
     }
+    output += '</table>';
   }
-  output += '</table>';
   return output;
 }
 
