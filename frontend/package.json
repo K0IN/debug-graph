@@ -14,7 +14,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@guolao/vue-monaco-editor": "^1.5.1",
+    "@guolao/vue-monaco-editor": "^1.5.2",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "comlink": "^4.4.1",
     "monaco-editor": "^0.50.0",
