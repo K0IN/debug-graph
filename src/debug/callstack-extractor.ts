@@ -124,7 +124,7 @@ async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLoc
 
 
 export async function getStacktraceInfo(): Promise<StackTraceInfo> {
-  const stackFrames = await callDebugFunction('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1 });
+  const stackFrames = await callDebugFunction('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1, startFrame: 0 });
   const callLocations = stackFrames.stackFrames.map((frame) => getCallLocation(frame).catch(() => undefined));
   const allResults = await Promise.all(callLocations);
   return allResults.filter(Boolean) as CallLocation[];

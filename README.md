@@ -11,7 +11,7 @@ A Visual Studio Code extension that visualizes the function calls (code paths) l
 This extension is designed to work with **all languages** supported by Visual Studio Code. However, the following languages have been tested for compatibility:
 
 | Language | Debugger | Linux | Windows | Notes |
-| --- | --- | --- | --- | --- | 
+| --- | --- | --- | --- | --- |
 | Go | golang | ✅ | ❔ | |
 | Python | [debugpy](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) | ✅ | ✅ | |
 | JavaScript | Node | ❔ | ✅ | using node.js runtime |
@@ -19,7 +19,7 @@ This extension is designed to work with **all languages** supported by Visual St
 | C++ | GDB | ✅ | ❔ | |
 | C | GDB | ✅ | ❔ | |
 | Rust | lldb | ✅ | ❔ | |
-| C# | - | ❌ | ❌ | Issue on c# side, see [issue #1](https://github.com/K0IN/stacktrace-history/issues/1) |
+| C# | - | ✅ | ❔ | dotnet 8 + 6 |
 
 ✅ tested | ❌ not working | ❔ not tested
 
