@@ -42,6 +42,11 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
 
+      - run: sudo apt update && sudo apt install -y python
+        name: Install dependencies for python tests
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
       - run: Xvfb -ac :99 -screen 0 1280x1024x16 &
       - run: npm install
       - run: npm install
