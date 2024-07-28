@@ -70,11 +70,7 @@ jobs:
       - run: npm install
         working-directory: ./frontend
 
-      - name: Test VSCode
-        run: xvfb-run --auto-servernum npm run test
-        env:
-          DISPLAY: ":99"
-          LIBGL_ALWAYS_SOFTWARE: "1"
-          MESA_GL_VERSION_OVERRIDE: "4.0"
-          PYTHONPATH: ${{ github.workspace }}
-          PYTHON_EXECUTABLE: $(which python3)
+      - name: Run tests
+        uses: GabrielBB/xvfb-action@v1
+        with:
+          run: npm test
