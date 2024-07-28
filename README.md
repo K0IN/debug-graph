@@ -12,14 +12,14 @@ This extension is designed to work with **all languages** supported by Visual St
 
 | Language | Debugger | Linux | Windows | Notes |
 | --- | --- | --- | --- | --- |
-| Go | golang | ✅ | ❔ | |
+| Go | golang | ✅ | ✅ | |
 | Python | [debugpy](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) | ✅ | ✅ | |
 | JavaScript | Node | ❔ | ✅ | using node.js runtime |
 | TypeScript | pwa-node | ✅ | ✅ | using Deno runtime |
 | C++ | GDB | ✅ | ❔ | |
 | C | GDB | ✅ | ❔ | |
 | Rust | lldb | ✅ | ❔ | |
-| C# | - | ✅ | ❔ | dotnet 8 + 6 |
+| C# | dotnet | ✅ | ✅ | dotnet 8 + 6 |
 
 ✅ tested | ❌ not working | ❔ not tested
 
