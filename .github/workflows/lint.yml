@@ -46,28 +46,13 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
 
-      - name: Check Python version
-        run: python3 --version
-
-      - name: Install Python dependencies
-        run: |
-          if [ -f requirements.txt ]; then
-            pip3 install -r requirements.txt
-          fi
-
-      - name: Start Xvfb
-        run: |
-          Xvfb :99 -ac -screen 0 1280x1024x24 -verbose > xvfb.log 2>&1 &
-          echo "Started Xvfb"
-          sleep 3  # Give Xvfb some time to start
-
-      - name: Set DISPLAY environment variable
-        run: |
-          echo "DISPLAY=:99" >> $GITHUB_ENV
-
       - run: npm install
 
       - run: npm install
         working-directory: ./frontend
 
-      - run: npm run test
+      - name: Run tests
+        run: |
+          export DISPLAY=':99.0'
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          npm test
