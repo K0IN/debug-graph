@@ -7,11 +7,11 @@ suite('Test python compatibility', function () {
   this.timeout(60_000);
 
   this.beforeAll(async () => {
-    await vscode.extensions.getExtension('ms-python.debugpy')!.activate();
-    await vscode.extensions.getExtension('ms-python.python')!.activate();
+    await vscode.extensions.getExtension('ms-python.debugpy')?.activate();
+    await vscode.extensions.getExtension('ms-python.python')?.activate();
   });
 
-  this.afterAll(async () => {
+  this.afterEach(async () => {
     vscode.debug.stopDebugging();
     vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
   });
