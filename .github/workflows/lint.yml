@@ -76,7 +76,5 @@ jobs:
           DISPLAY: ":99"
           LIBGL_ALWAYS_SOFTWARE: "1"
           MESA_GL_VERSION_OVERRIDE: "4.0"
-
-      - name: Display Xvfb log if tests failed
-        if: failure()
-        run: cat xvfb.log
+          PYTHONPATH: ${{ github.workspace }}
+          PYTHON_EXECUTABLE: $(which python3)

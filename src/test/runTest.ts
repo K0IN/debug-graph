@@ -12,7 +12,6 @@ async function main() {
     const extensionTestsPath = path.resolve(__dirname, './suite/index');
     const launchArgs = [
       '--disable-gpu',
-      '--disable-extensions',
       '--disable-workspace-trust',
       '--install-extension=ms-python.debugpy',
       '--install-extension=ms-python.python',
