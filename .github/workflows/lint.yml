@@ -42,7 +42,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
 
-      - run: sudo apt update && sudo apt install -y python
+      - run: sudo apt update && sudo apt install -y python3
         name: Install dependencies for python tests
         env:
           DEBIAN_FRONTEND: noninteractive
