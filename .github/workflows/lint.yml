@@ -1,7 +1,8 @@
+name: Lint and Test Extension
+
 on:
   push:
 
-name: Lint Extension
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -37,21 +38,45 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: sudo apt update && sudo apt install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2 libx11-xcb1
-        name: install virtual display
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libxss1 libasound2 libx11-xcb1 libxkbfile1 libsecret-1-0 python3 python3-pip
         env:
           DEBIAN_FRONTEND: noninteractive
 
-      - run: sudo apt update && sudo apt install -y python3
-        name: Install dependencies for python tests
-        env:
-          DEBIAN_FRONTEND: noninteractive
+      - name: Check Python version
+        run: python3 --version
 
-      - run: Xvfb -ac :99 -screen 0 1280x1024x16 &
+      - name: Install Python dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip3 install -r requirements.txt
+          fi
+
+      - name: Start Xvfb
+        run: |
+          Xvfb :99 -ac -screen 0 1280x1024x24 -verbose > xvfb.log 2>&1 &
+          echo "Started Xvfb"
+          sleep 3  # Give Xvfb some time to start
+
+      - name: Set DISPLAY environment variable
+        run: |
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
       - run: npm install
+
       - run: npm install
         working-directory: ./frontend
-      - run: npm run test
-        name: Test VSCode
+
+      - name: Test VSCode
+        run: xvfb-run --auto-servernum npm run test
         env:
           DISPLAY: ":99"
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          MESA_GL_VERSION_OVERRIDE: "4.0"
+
+      - name: Display Xvfb log if tests failed
+        if: failure()
+        run: cat xvfb.log
