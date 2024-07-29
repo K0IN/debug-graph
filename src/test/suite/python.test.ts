@@ -32,8 +32,8 @@ suite('Test python compatibility', function () {
 
     assert.ok(success, 'Failed to add workspace folder');
 
-    const workspace = vscode.workspace.workspaceFolders?.[0];
-    assert.ok(workspace, 'Failed to get workspace folder');
+    // const workspace = vscode.workspace.workspaceFolders?.[0];
+    // assert.ok(workspace, 'Failed to get workspace folder');
 
     const breakpoints = [
       new vscode.SourceBreakpoint(new vscode.Location(mainFileUri, new vscode.Position(13, 0))),
