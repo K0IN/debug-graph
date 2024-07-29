@@ -25,9 +25,11 @@ suite('Test python compatibility', function () {
 
     const mainFileUri = vscode.Uri.file(workspaceTestFilePath);
 
+    const folders = vscode.workspace.workspaceFolders;
+
     const success = vscode.workspace.updateWorkspaceFolders(
-      vscode.workspace.workspaceFolders
-        ? vscode.workspace.workspaceFolders.length
+      folders
+        ? folders.length
         : 0,
       null, { uri: vscode.Uri.from({ scheme: 'file', path: workspaceFolderPath }), name: 'python_code' });
 
@@ -42,7 +44,7 @@ suite('Test python compatibility', function () {
     ];
 
     vscode.debug.addBreakpoints(breakpoints);
-    const mockWorkspaceFolder = {
+    const mockWorkspaceFolder = folders && folders.length > 0 ? folders[0] : {
       uri: vscode.Uri.file(workspaceFolderPath),
       name: 'python_code',
       index: 0
