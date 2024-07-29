@@ -31,7 +31,7 @@ suite('Test python compatibility', function () {
       null, { uri: vscode.Uri.from({ scheme: 'file', path: workspaceFolderPath }), name: 'python_code' });
 
     assert.ok(success, 'Failed to add workspace folder');
-
+    assert.ok(vscode.workspace.workspaceFolders, 'Failed to get workspace folders');
     // const workspace = vscode.workspace.workspaceFolders?.[0];
     // assert.ok(workspace, 'Failed to get workspace folder');
 
