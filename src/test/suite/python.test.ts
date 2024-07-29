@@ -1,8 +1,6 @@
 import * as assert from 'assert';
 import path from 'path';
 import * as vscode from 'vscode';
-import { getStacktraceInfo } from '../../debug/callstack-extractor';
-//import { getStacktraceInfo } from '../../debug/callstack-extractor';
 
 suite('Test python compatibility', function () {
   this.timeout(60_000);
