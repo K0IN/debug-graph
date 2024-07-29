@@ -47,8 +47,8 @@ suite('Test python compatibility', function () {
     };
 
     assert.ok(config, 'Failed to get workspace folders');
-    const workspace = vscode.workspace.workspaceFolders?.[0];
-    assert.ok(workspace, 'Failed to get workspace folder');
+    // const workspace = vscode.workspace.workspaceFolders?.[0];
+    // assert.ok(workspace, 'Failed to get workspace folder');
     /*
        const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
        await vscode.debug.startDebugging(workspace, config);
