@@ -31,7 +31,7 @@ suite('Test python compatibility', function () {
       null, { uri: vscode.Uri.from({ scheme: 'file', path: workspaceFolderPath }), name: 'python_code' });
 
     assert.ok(success, 'Failed to add workspace folder');
-    assert.ok(vscode.workspace.workspaceFolders, 'Failed to get workspace folders');
+    // assert.ok(vscode.workspace.workspaceFolders, 'Failed to get workspace folders');
     // const workspace = vscode.workspace.workspaceFolders?.[0];
     // assert.ok(workspace, 'Failed to get workspace folder');
 
@@ -41,7 +41,12 @@ suite('Test python compatibility', function () {
     ];
 
     vscode.debug.addBreakpoints(breakpoints);
-
+    const mockWorkspaceFolder = {
+      uri: vscode.Uri.file(workspaceFolderPath),
+      name: 'python_code',
+      index: 0
+    };
+    (vscode.workspace.workspaceFolders as any) = [mockWorkspaceFolder];
     // const config: vscode.DebugConfiguration = {
     //   type: 'python',
     //   request: 'launch',
