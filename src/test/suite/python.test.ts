@@ -56,6 +56,10 @@ suite('Test python compatibility', function () {
     // const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
     //await vscode.debug.startDebugging(undefined, config);
     //await vscode.commands.executeCommand('workbench.action.debug.start');
+
+    console.log('mainFileUri = ', mainFileUri.fsPath);
+
+
     await vscode.debug.startDebugging(undefined, {
       type: 'python',
       name: 'Python: Current File',
