@@ -39,14 +39,14 @@ suite('Test python compatibility', function () {
 
     vscode.debug.addBreakpoints(breakpoints);
 
-    const config: vscode.DebugConfiguration = {
-      type: 'python',
-      request: 'launch',
-      name: 'Launch Program',
-      program: mainFileUri.fsPath,
-    };
+    // const config: vscode.DebugConfiguration = {
+    //   type: 'python',
+    //   request: 'launch',
+    //   name: 'Launch Program',
+    //   program: mainFileUri.fsPath,
+    // };
 
-    assert.ok(config, 'Failed to get workspace folders');
+    // assert.ok(config, 'Failed to get workspace folders');
     // const workspace = vscode.workspace.workspaceFolders?.[0];
     // assert.ok(workspace, 'Failed to get workspace folder');
     /*
