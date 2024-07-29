@@ -45,17 +45,22 @@ suite('Test python compatibility', function () {
 
 
     // (vscode.workspace.workspaceFolders as any) = [mockWorkspaceFolder];
-    const config: vscode.DebugConfiguration = {
+    // const config: vscode.DebugConfiguration = {
+    //   type: 'python',
+    //   request: 'launch',
+    //   name: 'Launch Program',
+    //   program: mainFileUri.fsPath,
+    // };
+
+    // console.log('config = ', config);
+    // const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
+    //await vscode.debug.startDebugging(undefined, config);
+    await vscode.commands.executeCommand('workbench.action.debug.start', undefined, {
       type: 'python',
       request: 'launch',
       name: 'Launch Program',
       program: mainFileUri.fsPath,
-    };
-
-    console.log('config = ', config);
-    // const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
-    //await vscode.debug.startDebugging(undefined, config);
-    await vscode.commands.executeCommand('workbench.action.debug.start');
+    });
 
     // await onStackItemChanged;
 
