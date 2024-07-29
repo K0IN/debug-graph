@@ -44,11 +44,8 @@ suite('Test python compatibility', function () {
     ];
 
     vscode.debug.addBreakpoints(breakpoints);
-    const mockWorkspaceFolder = folders && folders.length > 0 ? folders[0] : {
-      uri: vscode.Uri.file(workspaceFolderPath),
-      name: 'python_code',
-      index: 0
-    };
+
+
     // (vscode.workspace.workspaceFolders as any) = [mockWorkspaceFolder];
     const config: vscode.DebugConfiguration = {
       type: 'python',
@@ -60,7 +57,7 @@ suite('Test python compatibility', function () {
     assert.ok(config, 'Failed to get workspace folders');
 
     const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
-    await vscode.debug.startDebugging(mockWorkspaceFolder, config);
+    await vscode.debug.startDebugging(undefined, config);
     await onStackItemChanged;
 
     const stackTraceInfo = await getStacktraceInfo();
