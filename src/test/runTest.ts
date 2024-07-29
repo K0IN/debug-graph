@@ -11,11 +11,11 @@ async function main() {
     // The path to test runner
     const extensionTestsPath = path.resolve(__dirname, './suite/index');
     const launchArgs = [
-      '--disable-gpu',
-      '--disable-workspace-trust',
-      '--install-extension=ms-python.debugpy',
-      '--install-extension=ms-python.python',
-    ];
+      //  '--disable-gpu',
+      //  '--disable-workspace-trust',
+      //  '--install-extension=ms-python.debugpy',
+      //  '--install-extension=ms-python.python',
+    ] as string[];
     // Download VS Code, unzip it and run the integration test
     await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs, version: 'stable' });
   } catch (err) {
