@@ -1,5 +1,5 @@
-// import * as assert from 'assert';
-//import path from 'path';
+import * as assert from 'assert';
+import path from 'path';
 import * as vscode from 'vscode';
 //import { getStacktraceInfo } from '../../debug/callstack-extractor';
 
@@ -18,11 +18,13 @@ suite('Test python compatibility', function () {
 
   test('Test Call Stack', async () => {
 
-    /*
     const extensionDevelopmentPath = path.resolve(__dirname, '../../../test_code/');
     const workspaceFolderPath = path.join(extensionDevelopmentPath, 'python');
     const workspaceTestFilePath = path.join(workspaceFolderPath, 'main.py');
 
+    assert.ok(workspaceTestFilePath);
+
+    /*
     const mainFileUri = vscode.Uri.file(workspaceTestFilePath);
 
     const success = vscode.workspace.updateWorkspaceFolders(
