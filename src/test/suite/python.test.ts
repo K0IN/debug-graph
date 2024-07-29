@@ -54,7 +54,7 @@ suite('Test python compatibility', function () {
 
     console.log('config = ', config);
     // const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
-    // await vscode.debug.startDebugging(undefined, config);
+    await vscode.debug.startDebugging(undefined, config);
     // await onStackItemChanged;
 
     // const stackTraceInfo = await getStacktraceInfo();
