@@ -55,8 +55,13 @@ suite('Test python compatibility', function () {
     // console.log('config = ', config);
     // const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
     //await vscode.debug.startDebugging(undefined, config);
-    await vscode.commands.executeCommand('workbench.action.debug.start');
-
+    //await vscode.commands.executeCommand('workbench.action.debug.start');
+    await vscode.debug.startDebugging(undefined, {
+      type: 'python',
+      name: 'Python: Current File',
+      request: 'launch',
+      program: mainFileUri.fsPath,
+    });
     // await onStackItemChanged;
 
     // const stackTraceInfo = await getStacktraceInfo();
