@@ -47,7 +47,7 @@ suite('Test python compatibility', function () {
       name: 'python_code',
       index: 0
     };
-    (vscode.workspace.workspaceFolders as any) = [mockWorkspaceFolder];
+    // (vscode.workspace.workspaceFolders as any) = [mockWorkspaceFolder];
     const config: vscode.DebugConfiguration = {
       type: 'python',
       request: 'launch',
