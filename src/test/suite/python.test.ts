@@ -22,9 +22,6 @@ suite('Test python compatibility', function () {
     const workspaceFolderPath = path.join(extensionDevelopmentPath, 'python');
     const workspaceTestFilePath = path.join(workspaceFolderPath, 'main.py');
 
-    assert.ok(workspaceTestFilePath);
-
-    /*
     const mainFileUri = vscode.Uri.file(workspaceTestFilePath);
 
     const success = vscode.workspace.updateWorkspaceFolders(
@@ -41,29 +38,29 @@ suite('Test python compatibility', function () {
     ];
 
     vscode.debug.addBreakpoints(breakpoints);
-
-    const config: vscode.DebugConfiguration = {
-      type: 'python',
-      request: 'launch',
-      name: 'Launch Program',
-      program: mainFileUri.fsPath,
-    };
-
-    const workspace = vscode.workspace.workspaceFolders?.[0];
-
-    const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
-    await vscode.debug.startDebugging(workspace, config);
-    await onStackItemChanged;
-
-    const stackTraceInfo = await getStacktraceInfo();
-    assert.ok(stackTraceInfo, 'Failed to get stack trace info');
-    // asset only the first and last stack frame for now
-    assert.equal(stackTraceInfo.length, 4, 'Did not get the expected number of stack frames');
-    assert.equal(stackTraceInfo[0].locationInCode.startLine, 2, 'Did not get the expected line inside function');
-    assert.equal(stackTraceInfo[0].fileLocationOffset.startLine, 11, 'Did not get the expected offset in file');
-
-    assert.equal(stackTraceInfo[3].locationInCode.startLine, 3, 'Did not get the expected line inside function');
-    assert.equal(stackTraceInfo[3].fileLocationOffset.startLine, 41, 'Did not get the expected offset in file');
-  */
+    /*
+        const config: vscode.DebugConfiguration = {
+          type: 'python',
+          request: 'launch',
+          name: 'Launch Program',
+          program: mainFileUri.fsPath,
+        };
+    
+        const workspace = vscode.workspace.workspaceFolders?.[0];
+    
+        const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
+        await vscode.debug.startDebugging(workspace, config);
+        await onStackItemChanged;
+    
+        const stackTraceInfo = await getStacktraceInfo();
+        assert.ok(stackTraceInfo, 'Failed to get stack trace info');
+        // asset only the first and last stack frame for now
+        assert.equal(stackTraceInfo.length, 4, 'Did not get the expected number of stack frames');
+        assert.equal(stackTraceInfo[0].locationInCode.startLine, 2, 'Did not get the expected line inside function');
+        assert.equal(stackTraceInfo[0].fileLocationOffset.startLine, 11, 'Did not get the expected offset in file');
+    
+        assert.equal(stackTraceInfo[3].locationInCode.startLine, 3, 'Did not get the expected line inside function');
+        assert.equal(stackTraceInfo[3].fileLocationOffset.startLine, 41, 'Did not get the expected offset in file');
+      */
   });
 });

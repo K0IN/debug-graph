@@ -34,7 +34,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [windows-latest] # macos-latest #ubuntu-latest,
+        os: [ubuntu-latest, windows-latest] # macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -60,8 +60,8 @@ jobs:
       - run: npm install
         working-directory: ./frontend
 
-      - run: npm install
       - run: xvfb-run -a npm test
         if: runner.os == 'Linux'
+
       - run: npm test
         if: runner.os != 'Linux'
