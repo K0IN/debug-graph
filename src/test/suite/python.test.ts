@@ -56,9 +56,9 @@ suite('Test python compatibility', function () {
 
     assert.ok(config, 'Failed to get workspace folders');
 
-    const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
+    // const onStackItemChanged = new Promise<void>((resolve) => vscode.debug.onDidChangeActiveStackItem(() => resolve()));
     await vscode.debug.startDebugging(undefined, config);
-    await onStackItemChanged;
+    // await onStackItemChanged;
 
     const stackTraceInfo = await getStacktraceInfo();
     assert.ok(stackTraceInfo, 'Failed to get stack trace info');
