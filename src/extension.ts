@@ -31,14 +31,14 @@ export async function activate(context: ExtensionContext) {
   // stopped/started/changed debug session
   context.subscriptions.push(debug.onDidChangeActiveDebugSession(updateViewWithStackTrace));
 
-  workspace.onDidChangeConfiguration(async event => {
+  context.subscriptions.push(workspace.onDidChangeConfiguration(async event => {
     if (event.affectsConfiguration('workbench.colorTheme')) {
       const theme = await getMonacoTheme();
       await currentFrontendRpcChannel?.setTheme(theme);
     }
-  });
+  }));
 
-  commands.registerCommand('call-graph.show-call-graph', async () => {
+  context.subscriptions.push(commands.registerCommand('call-graph.show-call-graph', async () => {
     try {
       if (!currentPanel?.webview) {
         currentPanel = createWebview(context);
@@ -56,15 +56,13 @@ export async function activate(context: ExtensionContext) {
 
       currentPanel.onDidDispose(() => {
         currentPanel = undefined;
+        currentFrontendRpcChannel = undefined;
       });
-
-      // release current channel if needed
 
       currentFrontendRpcChannel = Comlink.wrap<ComlinkFrontendApi>(getComlinkChannel(currentPanel.webview, context));
 
       // fire and for get - try to set the theme but don't mind if we cant.
       getMonacoTheme().then(theme => currentFrontendRpcChannel?.setTheme(theme).catch(e => window.showErrorMessage("failed to set style in stack trace view due to error:" + e)));
-
 
       if (debug.activeDebugSession) {
         await updateViewWithStackTrace();
@@ -74,13 +72,13 @@ export async function activate(context: ExtensionContext) {
     } catch (e: unknown) {
       window.showErrorMessage("failed, to create panel" + e);
     }
-  });
+  }));
 
 
-  window.registerWebviewPanelSerializer('graph-visualization', {
+  context.subscriptions.push(window.registerWebviewPanelSerializer('graph-visualization', {
     deserializeWebviewPanel: async (webviewPanel: WebviewPanel, _state: unknown) => {
       currentPanel = webviewPanel;
       await commands.executeCommand('call-graph.show-call-graph');
     }
-  });
+  }));
 }

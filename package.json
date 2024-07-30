@@ -69,7 +69,7 @@
     "compile-tests": "tsc -p ./ --outDir out",
     "watch-tests": "tsc -p ./ -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "test": "node ./out/test/runTest.js",
+    "test": "vscode-test",
     "build": "npm run compile-all",
     "install-deps": "npm i && cd frontend && npm i"
   },

@@ -7,8 +7,13 @@ suite('Test python compatibility', function () {
   this.timeout(60_000);
 
   this.beforeAll(async () => {
-    await vscode.extensions.getExtension('ms-python.debugpy')?.activate();
-    await vscode.extensions.getExtension('ms-python.python')?.activate();
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    // install extensions
+    await vscode.commands.executeCommand('workbench.extensions.installExtension', 'ms-python.debugpy');
+    await vscode.commands.executeCommand('workbench.extensions.installExtension', 'ms-python.python');
+
+    await vscode.extensions.getExtension('ms-python.debugpy')!.activate();
+    await vscode.extensions.getExtension('ms-python.python')!.activate();
   });
 
   this.afterEach(async () => {
