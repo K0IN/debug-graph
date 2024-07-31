@@ -51,6 +51,8 @@ async function getFunctionLocation(file: Uri, name: string, zeroIndexedLine: num
     return exactMatch.range;
   } else if (allFunctions.length === 1) {
     return allFunctions[0].range;
+  } else if (allFunctions.find(symbol => symbol.name.includes(name))) {
+    return allFunctions.find(symbol => symbol.name.includes(name))!.range;
   }
 
   throw new Error("Symbol not found");
