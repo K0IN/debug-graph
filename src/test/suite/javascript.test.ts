@@ -40,8 +40,8 @@ suite('Test javascript compatibility', function () {
 
     validateStacktraceInfo(stackTraceInfo, [
       {
-        code: "printStackTrace() {\r\n    console.trace(`Stack trace for ${this.name}`);\r\n  }",
-        file: "/e:/src/stacktrace-history/test_code/javascript_node/index.js",
+        code: "printStackTrace() {\n    console.trace(`Stack trace for ${this.name}`);\n  }",
+        file: "test_code/javascript_node/index.js",
         frameId: 0,
         language: "javascript",
         fileLocationOffset: {
@@ -54,8 +54,8 @@ suite('Test javascript compatibility', function () {
         },
       },
       {
-        code: "callGrandchild() {\r\n    const grandchild = new Grandchild();\r\n    grandchild.printStackTrace();\r\n  }",
-        file: "/e:/src/stacktrace-history/test_code/javascript_node/index.js",
+        code: "callGrandchild() {\n    const grandchild = new Grandchild();\n    grandchild.printStackTrace();\n  }",
+        file: "test_code/javascript_node/index.js",
         frameId: 1,
         language: "javascript",
         fileLocationOffset: {
@@ -68,8 +68,8 @@ suite('Test javascript compatibility', function () {
         },
       },
       {
-        code: "callChild() {\r\n    const child = new Child();\r\n    child.callGrandchild();\r\n  }",
-        file: "/e:/src/stacktrace-history/test_code/javascript_node/index.js",
+        code: "callChild() {\n    const child = new Child();\n    child.callGrandchild();\n  }",
+        file: "test_code/javascript_node/index.js",
         frameId: 2,
         language: "javascript",
         fileLocationOffset: {
@@ -82,8 +82,8 @@ suite('Test javascript compatibility', function () {
         },
       },
       {
-        code: "}\r\n\r\nconst obj = new Parent();\r\nobj.callChild();\r\n\r\nfunction showAllStackTraces() {\r\n  const grandchild = new Grandchild();",
-        file: "/e:/src/stacktrace-history/test_code/javascript_node/index.js",
+        code: "}\n\nconst obj = new Parent();\nobj.callChild();\n\nfunction showAllStackTraces() {\n  const grandchild = new Grandchild();",
+        file: "test_code/javascript_node/index.js",
         frameId: 3,
         language: "javascript",
         fileLocationOffset: {

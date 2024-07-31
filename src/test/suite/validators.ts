@@ -10,10 +10,10 @@ function validateSerializedRange(value: SerializedRange, expected: SerializedRan
 }
 
 function validateCallLocation(value: CallLocation, expected: CallLocation) {
-  assert.ok(value.frameId, "FrameId is not set"); // this can differ from call to call
+  assert.ok(value.frameId !== undefined, "FrameId is not set"); // this can differ from call to call
 
   assert.equal(value.code, expected.code, "Code does not match");
-  assert.equal(value.file, expected.file, "File does not match");
+  assert.ok(value.file.endsWith(expected.file), "File does not match");
   assert.equal(value.language, expected.language, "Language does not match");
 
   validateSerializedRange(value.fileLocationOffset, expected.fileLocationOffset);

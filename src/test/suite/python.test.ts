@@ -44,8 +44,8 @@ suite('Test python compatibility', function () {
     assert.ok(stackTraceInfo, 'Failed to get stack trace info');
     validateStacktraceInfo(stackTraceInfo, [
       {
-        code: "def dummy_method(self):\r\n        \"\"\"dummy method\"\"\"\r\n        print(\"This is a dummy method\", self.a, self.b)",
-        file: "/e:/src/stacktrace-history/test_code/python/main.py",
+        code: "def dummy_method(self):\n        \"\"\"dummy method\"\"\"\n        print(\"This is a dummy method\", self.a, self.b)",
+        file: "test_code/python/main.py",
         frameId: 2,
         language: "python",
         fileLocationOffset: {
@@ -58,8 +58,8 @@ suite('Test python compatibility', function () {
         },
       },
       {
-        code: "def deep_code():\r\n    \"\"\"i do stuff\"\"\"\r\n    a = {\"a\": 1, \"b\": 2, \"c\": 3}\r\n    x = Dummy()\r\n    x.dummy_method()\r\n    b = 2\r\n    c = 1 + b\r\n    d = c ** c\r\n    print(\"This is a deep code\", c, d)\r\n\r\n    def lol():\r\n        print(\"This is a lol function\")\r\n    lol()",
-        file: "/e:/src/stacktrace-history/test_code/python/main.py",
+        code: "def deep_code():\n    \"\"\"i do stuff\"\"\"\n    a = {\"a\": 1, \"b\": 2, \"c\": 3}\n    x = Dummy()\n    x.dummy_method()\n    b = 2\n    c = 1 + b\n    d = c ** c\n    print(\"This is a deep code\", c, d)\n\n    def lol():\n        print(\"This is a lol function\")\n    lol()",
+        file: "test_code/python/main.py",
         frameId: 3,
         language: "python",
         fileLocationOffset: {
@@ -72,8 +72,8 @@ suite('Test python compatibility', function () {
         },
       },
       {
-        code: "def main():\r\n    \"\"\"main code\"\"\"\r\n    print(\"This is a main code\")\r\n    a = 1\r\n    b = 2\r\n    c = a + b\r\n    deep_code()\r\n    deep_code()\r\n    deep_code()",
-        file: "/e:/src/stacktrace-history/test_code/python/main.py",
+        code: "def main():\n    \"\"\"main code\"\"\"\n    print(\"This is a main code\")\n    a = 1\n    b = 2\n    c = a + b\n    deep_code()\n    deep_code()\n    deep_code()",
+        file: "test_code/python/main.py",
         frameId: 4,
         language: "python",
         fileLocationOffset: {
@@ -86,8 +86,8 @@ suite('Test python compatibility', function () {
         },
       },
       {
-        code: "\r\nif __name__ == \"__main__\":\r\n    a = 1337\r\n    main()\r\n",
-        file: "/e:/src/stacktrace-history/test_code/python/main.py",
+        code: "\nif __name__ == \"__main__\":\n    a = 1337\n    main()\n",
+        file: "test_code/python/main.py",
         frameId: 5,
         language: "python",
         fileLocationOffset: {
