@@ -5,16 +5,11 @@ import { getStacktraceInfo } from '../../debug/callstack-extractor';
 import { getCurrentValueForPosition } from '../../inspect';
 
 suite('Test golang compatibility', function () {
-  this.timeout(600_000);
+  this.timeout(60_000);
 
   this.beforeAll(async () => {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-    // install extensions
-    let tries = 3;
-    while (!vscode.extensions.getExtension('golang.go') && tries-- > 0) {
-
-      await vscode.commands.executeCommand('workbench.extensions.installExtension', 'golang.go');
-    }
+    await vscode.commands.executeCommand('workbench.extensions.installExtension', 'golang.go');
     await vscode.extensions.getExtension('golang.go')!.activate();
   });
 
