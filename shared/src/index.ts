@@ -6,7 +6,6 @@ export type SerializedRange = {
 };
 
 export interface CallLocation {
-  index: number;
   file: string;
   locationInCode: SerializedRange; // this is the location inside the sent code!
   fileLocationOffset: SerializedRange; // this is the location inside the file
