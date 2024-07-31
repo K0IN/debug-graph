@@ -1,12 +1,43 @@
-function add(a, b) {
-  return a + b;
+class Parent {
+  constructor() {
+    this.name = "Parent";
+  }
+
+  callChild() {
+    const child = new Child();
+    child.callGrandchild();
+  }
 }
 
-const greeting = "Hello, world!";
-console.log(greeting);
+class Child extends Parent {
+  constructor() {
+    super();
+    this.name = "Child";
+  }
 
-const number = 42;
-console.log("The number is:", number);
+  callGrandchild() {
+    const grandchild = new Grandchild();
+    grandchild.printStackTrace();
+  }
+}
 
-const result = add(5, 3);
-console.log("The sum is:", result);
+class Grandchild extends Child {
+  constructor() {
+    super();
+    this.name = "Grandchild";
+  }
+
+  printStackTrace() {
+    console.trace(`Stack trace for ${this.name}`);
+  }
+}
+
+const obj = new Parent();
+obj.callChild();
+
+function showAllStackTraces() {
+  const grandchild = new Grandchild();
+  grandchild.printStackTrace();
+}
+
+showAllStackTraces();
