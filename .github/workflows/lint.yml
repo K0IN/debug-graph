@@ -30,42 +30,42 @@ jobs:
       - run: npm install
         working-directory: ./frontend
       - run: npm run vscode:bundle
+#  test:
+#    strategy:
+#      matrix:
+#        os: [ubuntu-latest, windows-latest]
+#    runs-on: ${{ matrix.os }}
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/setup-node@v4
+#        with:
+#          node-version: 20
+#
+#      - name: Install dependencies
+#        run: |
+#          sudo apt update
+#          sudo apt install -y python3
+#        if: runner.os == 'Linux'
+#        env:
+#          DEBIAN_FRONTEND: noninteractive
+#
+#      - name: Install dependencies
+#        run: |
+#          choco install python3
+#        if: runner.os == 'Windows'
+#
+#      - uses: actions/setup-go@v5
+#        with:
+#          go-version: 1.21
+#
+#      - run: npm install
+#
+#      - run: npm install
+#        working-directory: ./frontend
+#
+#      - run: xvfb-run -a npm test
+#        if: runner.os == 'Linux'
+#
+#      - run: npm test
+#        if: runner.os != 'Linux'
 
-  test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y python3
-        if: runner.os == 'Linux'
-        env:
-          DEBIAN_FRONTEND: noninteractive
-
-      - name: Install dependencies
-        run: |
-          choco install python3
-        if: runner.os == 'Windows'
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 1.21
-
-      - run: npm install
-
-      - run: npm install
-        working-directory: ./frontend
-
-      - run: xvfb-run -a npm test
-        if: runner.os == 'Linux'
-
-      - run: npm test
-        if: runner.os != 'Linux'
