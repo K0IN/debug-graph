@@ -1,14 +1,13 @@
 ﻿// See https://aka.ms/new-console-template for more information
-using test;
-
+using ClassLibrary1;
+using mytest;
 Console.WriteLine("Hello, World!");
 
 
-void main()
+async Task main()
 {
-  ITest test = new TestClass();
-  test.Test();
-  Console.WriteLine("Hello, World!");
+  var test = new MyTest();
+  await test.main();
 }
 
-main();
+await main();
