@@ -1,9 +1,8 @@
-import { commands, debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
+import { debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
 import { executeDocumentSymbolProvider } from "./typed-commands";
 import { CallLocation, StackTraceInfo } from "shared/src/index";
 import { callDebugFunction } from "../inspect/typed-debug";
 import { DebugProtocol } from "@vscode/debugprotocol";
-import path from "path";
 
 
 async function getAllSubnodesForSymbol(symbol: DocumentSymbol) {
