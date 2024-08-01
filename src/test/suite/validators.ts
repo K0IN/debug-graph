@@ -1,6 +1,7 @@
 import { CallLocation, StackTraceInfo, SerializedRange, ValueLookupResult, VariableInfo } from "shared/src";
 import * as assert from 'assert';
 
+type MaybePath = Omit<CallLocation, 'file' | 'frameId'> & { file?: string, frameId?: number };
 
 function validateSerializedRange(value: SerializedRange, expected: SerializedRange) {
   assert.equal(value.startLine, expected.startLine, "Start line does not match");
@@ -9,18 +10,18 @@ function validateSerializedRange(value: SerializedRange, expected: SerializedRan
   assert.equal(value.endCharacter, expected.endCharacter, "End character does not match");
 }
 
-function validateCallLocation(value: CallLocation, expected: CallLocation) {
+function validateCallLocation(value: CallLocation, expected: MaybePath) {
   assert.ok(value.frameId !== undefined, "FrameId is not set"); // this can differ from call to call
-
   assert.equal(value.code, expected.code, "Code does not match");
-  assert.ok(value.file.endsWith(expected.file), "File does not match");
+  if (expected.file !== undefined) {
+    assert.ok(value.file.endsWith(expected.file), "File does not match");
+  }
   assert.equal(value.language, expected.language, "Language does not match");
-
   validateSerializedRange(value.fileLocationOffset, expected.fileLocationOffset);
   validateSerializedRange(value.locationInCode, expected.locationInCode);
 }
 
-export function validateStacktraceInfo(value: StackTraceInfo, expected: StackTraceInfo) {
+export function validateStacktraceInfo(value: StackTraceInfo, expected: MaybePath[]) {
   assert.equal(value.length, expected.length, "Stack trace length does not match");
   for (let i = 0; i < value.length; i++) {
     validateCallLocation(value[i], expected[i]);
