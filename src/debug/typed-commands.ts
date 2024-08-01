@@ -1,5 +1,10 @@
-import { DocumentSymbol, Uri, commands } from "vscode";
+import { DocumentSymbol, Uri, commands, workspace } from "vscode";
 
-export function executeDocumentSymbolProvider(uri: Uri) {
-  return commands.executeCommand</* SymbolInformation[] |*/ DocumentSymbol[] | undefined>('vscode.executeDocumentSymbolProvider', uri);
+export async function executeDocumentSymbolProvider(uri: Uri) {
+  try {
+    await workspace.openTextDocument(uri);
+  } catch (e) {
+    // nop
+  }
+  return await commands.executeCommand</* SymbolInformation[] |*/ DocumentSymbol[] | undefined>('vscode.executeDocumentSymbolProvider', uri);
 }

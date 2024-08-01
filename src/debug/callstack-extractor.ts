@@ -1,8 +1,9 @@
-import { debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
+import { commands, debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
 import { executeDocumentSymbolProvider } from "./typed-commands";
 import { CallLocation, StackTraceInfo } from "shared/src/index";
 import { callDebugFunction } from "../inspect/typed-debug";
 import { DebugProtocol } from "@vscode/debugprotocol";
+import path from "path";
 
 
 async function getAllSubnodesForSymbol(symbol: DocumentSymbol) {
@@ -75,14 +76,16 @@ async function getLanguageForFile(file: Uri) {
 async function tryGetCallLocation(file: Uri, frame: DebugProtocol.StackFrame) {
   const zeroIndexedLine = frame.line - 1;
   const noFunctionLookupSize = 3;
+  let symbolLocation: Range | undefined;
 
-  const symbolLocation = await getFunctionLocation(file, frame.name, zeroIndexedLine)
-    .catch(() => undefined);
+  try {
+    symbolLocation = await getFunctionLocation(file, frame.name, zeroIndexedLine);
+  } catch (e) {
+    console.error("Failed to get function location", e);
+    symbolLocation = new Range(Math.max(zeroIndexedLine - noFunctionLookupSize, 0), 0, zeroIndexedLine + noFunctionLookupSize, 99999);
+  }
 
-
-  const code = symbolLocation
-    ? await getCodeAtRange(file, symbolLocation)
-    : await getCodeAtRange(file, new Range(Math.max(zeroIndexedLine - noFunctionLookupSize, 0), 0, zeroIndexedLine + noFunctionLookupSize, 99999));
+  const code = await getCodeAtRange(file, symbolLocation);
 
   const line = code
     ? (symbolLocation
@@ -116,18 +119,40 @@ async function getCallLocation(frame: DebugProtocol.StackFrame): Promise<CallLoc
   }
 
   try {
-    const file = Uri.parse(frame.source.path);
-    return await tryGetCallLocation(file, frame);
-  } catch (e) { }
+    const file = Uri.file(frame.source.path);
+    const location = await tryGetCallLocation(file, frame);
+    return location;
+  } catch (e) {
+    console.error("Failed to get call location", e);
+  }
 
-  const file = Uri.file(frame.source.path);
-  return await tryGetCallLocation(file, frame);
+  try {
+    const file = Uri.from({ scheme: 'file', path: frame.source.path });
+    const location = await tryGetCallLocation(file, frame);
+    return location;
+  } catch (e) {
+    console.error("Failed to get call location", e);
+  }
+
+  // backup plan - try to find file by name
+  const allFiles = await workspace.findFiles('**/*');
+  const filesWithSameName = allFiles.filter((file) => frame.source?.name && file.fsPath.endsWith(frame.source?.name));
+  if (filesWithSameName.length === 1) {
+    try {
+      const location = await tryGetCallLocation(filesWithSameName[0], frame);
+      return location;
+    } catch (e) {
+      console.error("Failed to get call location", e);
+    }
+  }
+
+  return undefined;
 }
 
 
 export async function getStacktraceInfo(): Promise<StackTraceInfo> {
   const stackFrames = await callDebugFunction('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1, startFrame: 0 });
-  const callLocations = stackFrames.stackFrames.map((frame) => getCallLocation(frame).catch(() => undefined));
+  const callLocations = stackFrames.stackFrames.map((frame) => getCallLocation(frame));
   const allResults = await Promise.all(callLocations);
   return allResults.filter(Boolean) as CallLocation[];
 }
