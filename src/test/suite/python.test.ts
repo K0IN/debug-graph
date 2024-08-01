@@ -28,7 +28,6 @@ suite('Test python compatibility', function () {
     const extensionDevelopmentPath = path.resolve(__dirname, '../../../test_code/');
     const workspaceFolderPath = path.join(extensionDevelopmentPath, 'python');
     const workspaceTestFilePath = path.join(workspaceFolderPath, 'main.py');
-
     const mainFileUri = vscode.Uri.file(workspaceTestFilePath);
 
     await executeWithBreakpoints({
