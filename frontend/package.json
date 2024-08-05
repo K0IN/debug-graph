@@ -19,7 +19,7 @@
     "comlink": "^4.4.1",
     "monaco-editor": "^0.50.0",
     "shared": "file:../shared",
-    "vue": "^3.4.29"
+    "vue": "^3.4.35"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.8.0",
