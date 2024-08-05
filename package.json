@@ -78,7 +78,7 @@
     "@types/node": "20.x",
     "@types/vscode": "^1.91.0",
     "@types/glob": "^8.1.0",
-    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^7.11.0",
     "@vscode/test-cli": "^0.0.9",
     "@vscode/test-electron": "^2.4.1",
