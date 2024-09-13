@@ -25,11 +25,18 @@ async function updateViewWithStackTrace() {
 export async function activate(context: ExtensionContext) {
   let currentPanel: WebviewPanel | undefined = undefined;
   // started debug session
-  context.subscriptions.push(debug.onDidStartDebugSession(updateViewWithStackTrace));
+  const updateView = () => {
+    if (!currentPanel || !currentPanel.visible) {
+      return;
+    }
+    updateViewWithStackTrace();
+  };
+
+  context.subscriptions.push(debug.onDidStartDebugSession(updateView));
   // step into, step out, step over, change active stack item, change active debug session, receive custom event
-  context.subscriptions.push(debug.onDidChangeActiveStackItem(updateViewWithStackTrace));
+  context.subscriptions.push(debug.onDidChangeActiveStackItem(updateView));
   // stopped/started/changed debug session
-  context.subscriptions.push(debug.onDidChangeActiveDebugSession(updateViewWithStackTrace));
+  context.subscriptions.push(debug.onDidChangeActiveDebugSession(updateView));
 
   context.subscriptions.push(workspace.onDidChangeConfiguration(async event => {
     if (event.affectsConfiguration('workbench.colorTheme')) {
@@ -66,9 +73,10 @@ export async function activate(context: ExtensionContext) {
 
       if (debug.activeDebugSession) {
         await updateViewWithStackTrace();
-      } else {
-        window.showWarningMessage('No active debug session, the view will automatically update when a debug session is started');
       }
+      // else {
+      //   window.showWarningMessage('No active debug session, the view will automatically update when a debug session is started');
+      // }
     } catch (e: unknown) {
       window.showErrorMessage("failed, to create panel" + e);
     }
