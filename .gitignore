@@ -9,3 +9,5 @@ debug/
 target/
 obj/
 *.exe
+.zig-cache
+zig-out

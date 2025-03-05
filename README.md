@@ -20,6 +20,7 @@ This extension is designed to work with **all languages** supported by Visual St
 | C | GDB | ✅ | ❔ | |
 | Rust | lldb | ✅ | ❔ | |
 | C# | dotnet | ✅ | ✅ | dotnet 8 + 6 |
+| Zig | lldb | ✅ | ❔ | version 0.14 |
 
 ✅ tested | ❌ not working | ❔ not tested
 
