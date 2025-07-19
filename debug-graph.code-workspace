@@ -1,0 +1,36 @@
+{
+    "folders": [
+        {
+            "name": "debug-graph",
+            "path": "."
+        },
+        {
+            "name": "frontend",
+            "path": "./frontend"
+        },
+        {
+            "name": "test-code",
+            "path": "./test_code"
+        },
+        {
+            "name": "shared-code",
+            "path": "./shared"
+        },
+        {
+            "name": "tests",
+            "path": "./src/test"
+        }
+    ],
+    "settings": {
+        "typescript.tsc.autoDetect": "off",
+        "triggerTaskOnSave.tasks": {
+            "frontend-build": [
+                "frontend/src/**/*.ts",
+                "frontend/src/**/*.vue"
+            ]
+        },
+        "cSpell.words": [
+            "Comlink"
+        ]
+    }
+}

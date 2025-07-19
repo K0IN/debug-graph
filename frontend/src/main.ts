@@ -10,5 +10,5 @@ export const vscode = acquireVsCodeApi<{ denseMode: boolean }>();
 export const stacktraceMap = new Map</* editor.ITextModel.id */string, CallLocation>();
 
 const app = createApp(App);
-app.use(VueMonacoEditorPlugin, { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.50.0/min/vs' } });
+app.use(VueMonacoEditorPlugin, { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.50.0/min/vs' }, });
 app.mount('#app');

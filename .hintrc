@@ -1,14 +1,14 @@
 {
-  "extends": [
-    "development"
-  ],
-  "hints": {
-    "axe/language": [
-      "default",
-      {
-        "html-has-lang": "off"
-      }
+    "extends": [
+        "development"
     ],
-    "typescript-config/is-valid": "off"
-  }
+    "hints": {
+        "axe/language": [
+            "default",
+            {
+                "html-has-lang": "off"
+            }
+        ],
+        "typescript-config/is-valid": "off"
+    }
 }
