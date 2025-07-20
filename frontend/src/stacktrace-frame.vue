@@ -2,7 +2,7 @@
 import { useMonaco } from '@guolao/vue-monaco-editor';
 import { editor, Range } from 'monaco-editor';
 import type { CallLocation, MonacoTheme, SerializedRange } from 'shared/src';
-import { computed, effect, nextTick, shallowRef, watch } from 'vue';
+import { computed, effect, shallowRef, watch } from 'vue';
 import { stacktraceMap } from './main';
 
 const props = defineProps<{
@@ -83,30 +83,31 @@ function setDecorators(editor: editor.IStandaloneCodeEditor, position: Serialize
 }
 
 
-async function layoutEditor(editor: editor.IStandaloneCodeEditor) {
-    const size = editor.getScrollHeight();
+function layoutEditor(editor: editor.IStandaloneCodeEditor) {
     const lineCount = editor.getModel()?.getLineCount() ?? 0;
-    // add a padding line so the editor shows all lines properly!
-    // this is only a issue if we have a horizontal scroll bar.
-    const lineSize = (lineCount > 0) ? (size / lineCount) : 14;
-    editor.layout({ width: 0, height: 0 }); // prevent growing
-    await nextTick();
-    editor.layout({ width: 100, height: size + lineSize });
+    const lineHeight = 18; // Standard line height for Monaco
+
+    // Calculate height based on line count, not scroll height
+    const contentHeight = lineCount * lineHeight;
+    const targetHeight = Math.min(Math.max(contentHeight + 10, 50), 400); // min 50px, max 400px
+
+    // Use CSS-based width instead of calculating container width
+    editor.layout({ width: 100, height: targetHeight });
 }
 
-async function setupEditor() {
+function setupEditor() {
     const editor = currentEditor.value;
     if (!editor || !props.traceFrame) {
         return;
     }
 
-    async function update() {
+    function update() {
         if (!editor) {
             return
         }
         editor.revealLineNearTop(props.traceFrame.locationInCode.startLine + 1);
         setDecorators(editor, props.traceFrame.locationInCode);
-        await layoutEditor(editor);
+        layoutEditor(editor);
 
         if (props.theme) {
             setTheme(props.theme);
@@ -116,7 +117,7 @@ async function setupEditor() {
     const disposable = editor.onDidChangeModelContent(update);
     editor.onDidDispose(() => disposable.dispose());
 
-    await update()
+    update()
 }
 
 const code = computed(() => {
@@ -139,7 +140,14 @@ function setTheme(monacoTheme: MonacoTheme) {
     }
 }
 
-watch([currentEditor, code], () => setupEditor().catch(console.error.bind(undefined, "Error while setting up editor")));
+watch([currentEditor, code], () => {
+    try {
+        setupEditor();
+    } catch (e) {
+        console.error("Error while setting up editor", e);
+    }
+});
+
 watch([props.theme, monaco], () => {
     if (props.theme) setTheme(props.theme);
 });
@@ -148,6 +156,32 @@ watch(currentEditor, (editor) => {
     const domNode = editor?.getDomNode();
     domNode?.addEventListener("scroll", e => e.stopImmediatePropagation(), { capture: true });
     domNode?.addEventListener("wheel", e => e.stopImmediatePropagation(), { capture: true });
+
+    if (editor && domNode) {
+        let timeoutId: number;
+        const resizeObserver = new ResizeObserver(() => {
+            clearTimeout(timeoutId);
+            timeoutId = window.setTimeout(() => {
+                const container = domNode.parentElement;
+                if (container) {
+                    const containerRect = container.getBoundingClientRect();
+                    const targetWidth = Math.max(containerRect.width - 10, 100);
+                    const currentLayout = editor.getLayoutInfo();
+                    editor.layout({ width: targetWidth, height: currentLayout.height });
+                }
+            }, 150);
+        });
+
+        const container = domNode.parentElement;
+        if (container) {
+            resizeObserver.observe(container);
+        }
+
+        editor.onDidDispose(() => {
+            clearTimeout(timeoutId);
+            resizeObserver.disconnect();
+        });
+    }
 });
 </script>
 
@@ -176,7 +210,9 @@ watch(currentEditor, (editor) => {
         "path path focus"
         "code code code";
     grid-template-columns: 1fr 1fr auto;
-    grid-template-rows: 1fr min-content;
+    grid-template-rows: auto min-content;
+    min-height: 80px;
+    /* Prevent collapse */
 }
 
 .title-element {
@@ -185,6 +221,18 @@ watch(currentEditor, (editor) => {
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+}
+
+/* Ensure Monaco editor doesn't shrink too much */
+.frame-container .no-scroll {
+    min-width: 100px;
+    min-height: 50px;
+    width: 100%;
+}
+
+/* Override Monaco editor internal sizing */
+.frame-container .no-scroll :deep(.monaco-editor) {
+    width: 100% !important;
 }
 </style>
 
