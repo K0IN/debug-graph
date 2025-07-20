@@ -10,9 +10,9 @@
             }
         },
         {
-            "label": "frontend-build",
+            "label": "frontend-build-dev",
             "type": "npm",
-            "script": "build"
+            "script": "build:dev"
         }
     ]
 }

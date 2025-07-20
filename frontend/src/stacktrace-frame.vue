@@ -134,7 +134,6 @@ function setTheme(monacoTheme: MonacoTheme) {
         const themeName = 'tmp';
         monaco.monacoRef.value?.editor.defineTheme(themeName, monacoTheme as editor.IStandaloneThemeData);
         monaco.monacoRef.value?.editor.setTheme(themeName);
-        console.log("set theme", themeName, monacoTheme);
     } catch (e) {
         console.error("error setting theme", e);
     }
@@ -154,8 +153,7 @@ watch(currentEditor, (editor) => {
 
 <template>
     <vscode-panel-view class="frame-container">
-        <vscode-link style="grid-area: path;  white-space: nowrap;" class="title-element" :href="traceFrame.file"
-            @click="() => openFile()">
+        <vscode-link style="grid-area: path;" class="title-element" :href="traceFrame.file" @click="() => openFile()">
             {{ traceFrame.file }}:{{ getRealLineNumber(traceFrame, traceFrame.locationInCode.startLine) }}
         </vscode-link>
         <vscode-button style="grid-area: focus" @click="() => switchToStackFrame(traceFrame.frameId)">
@@ -163,6 +161,7 @@ watch(currentEditor, (editor) => {
         </vscode-button>
         <vue-monaco-editor style="grid-area: code;" class="no-scroll" :value="code" theme="vs-dark"
             :options="MONACO_EDITOR_OPTIONS" :language="traceFrame.language" @mount="setEditor" />
+
     </vscode-panel-view>
 </template>
 
@@ -174,13 +173,18 @@ watch(currentEditor, (editor) => {
     outline: 1px solid var(--vscode-panel-border);
     gap: 6px;
     grid-template-areas:
-        " path path focus" "code code code";
+        "path path focus"
+        "code code code";
     grid-template-columns: 1fr 1fr auto;
     grid-template-rows: 1fr min-content;
 }
 
 .title-element {
     align-items: baseline;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 </style>
 

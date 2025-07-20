@@ -23,12 +23,12 @@
     ],
     "settings": {
         "typescript.tsc.autoDetect": "off",
-        "triggerTaskOnSave.tasks": {
-            "frontend-build": [
-                "frontend/src/**/*.ts",
-                "frontend/src/**/*.vue"
-            ]
-        },
+        // "triggerTaskOnSave.tasks": {
+        //     "frontend-build-dev": [
+        //         "frontend/src/**/*.ts",
+        //         "frontend/src/**/*.vue"
+        //     ]
+        // },
         "cSpell.words": [
             "Comlink"
         ]
