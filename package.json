@@ -71,8 +71,7 @@
         "pretest": "npm run compile-tests && npm run compile && npm run lint",
         "test": "vscode-test",
         "build": "npm run compile-all",
-        "install-deps": "npm i && cd frontend && npm i",
-        "install": "npm install"
+        "install-deps": "npm i && cd frontend && npm i"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.7",
