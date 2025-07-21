@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import callstack_view from "./stacktrace-frame.vue"
 import { editor, languages, Position } from "monaco-editor";
-import { stacktraceMap } from "./main";
 import { useMonacoGlobalInit, type MonacoRefType } from "./monaco";
 import type { Checkbox } from "@vscode/webview-ui-toolkit";
 import { generateHoverContent } from "./hover";
-import { useGlobalSettingsStore, useVsEvents } from "./stores";
+import { useGlobalSettingsStore, useVsEvents, useStacktraceMapStore } from "./stores";
 import { useBackendApi } from "./backend-api";
 
 const store = useVsEvents();
 const fn = useBackendApi();
 const settings = useGlobalSettingsStore();
+const stacktraceMapStore = useStacktraceMapStore();
 
 function initGlobalMonaco(monacoRef: MonacoRefType) {
     monacoRef?.languages.registerHoverProvider('*', {
         provideHover: async (model: editor.ITextModel, position: Position, _token: /* CancellationToken */ any, _context?: languages.HoverContext<languages.Hover> | undefined): Promise<languages.Hover> => {
-            const callLocationInfo = stacktraceMap.get(model.id);
+            const callLocationInfo = stacktraceMapStore.getCallLocation(model.id);
             if (!callLocationInfo) {
                 return { contents: [] };
             }
