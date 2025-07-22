@@ -5,6 +5,7 @@ import type { } from "vscode-webview"; // this defines globals (acquireVsCodeApi
 import { install as VueMonacoEditorPlugin } from '@guolao/vue-monaco-editor'
 import { allComponents, provideVSCodeDesignSystem } from "@vscode/webview-ui-toolkit";
 import { getComlinkChannel } from './messaging';
+import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 
 provideVSCodeDesignSystem().register(allComponents);
 
@@ -19,5 +20,5 @@ app.use(pinia);
 app.provide('vscode', vscode);
 app.provide('comlinkChannels', comlinkChannels);
 
-app.use(VueMonacoEditorPlugin, { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' }, });
+app.use(VueMonacoEditorPlugin, { monaco: monacoEditor });
 app.mount('#app');
