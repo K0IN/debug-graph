@@ -5,60 +5,60 @@ import { MonacoTheme } from "shared/src/index";
 
 
 async function getCurrentThemeData(): Promise<object | undefined> {
-  const config = workspace.getConfiguration();
-  const theme = config.get('workbench.colorTheme') as string;
+    const config = workspace.getConfiguration();
+    const theme = config.get('workbench.colorTheme') as string;
 
-  const extension = extensions.all.find(ext => {
-    const contributes = ext.packageJSON.contributes;
-    return contributes && contributes.themes && contributes.themes.some((t: { label: string; }) => t.label === theme);
-  });
+    const extension = extensions.all.find(ext => {
+        const contributes = ext.packageJSON.contributes;
+        return contributes && contributes.themes && contributes.themes.some((t: { label: string; }) => t.label === theme);
+    });
 
-  if (!extension) {
-    return undefined;
-  }
+    if (!extension) {
+        return undefined;
+    }
 
-  const themeInfo = extension.packageJSON.contributes.themes.find((t: { label: string; }) => t.label === theme);
-  const themePath = path.join(extension.extensionPath, themeInfo.path);
+    const themeInfo = extension.packageJSON.contributes.themes.find((t: { label: string; }) => t.label === theme);
+    const themePath = path.join(extension.extensionPath, themeInfo.path);
 
-  return JSON.parse(await readFile(themePath, 'utf8'));
+    return JSON.parse(await readFile(themePath, 'utf8'));
 }
 
 function convertVSCodeThemeToMonacoTheme(themeData: any): MonacoTheme {
-  const monacoTheme = {
-    base: getMonacoBaseTheme(themeData.type),
-    inherit: true,
-    rules: [] as any,
-    colors: {} as any
-  } as MonacoTheme;
+    const monacoTheme = {
+        base: getMonacoBaseTheme(themeData.type),
+        inherit: true,
+        rules: [] as any,
+        colors: {} as any
+    } as MonacoTheme;
 
-  monacoTheme.colors['editor.background'] = themeData.colors['editor.background'];
-  monacoTheme.colors['editor.foreground'] = themeData.colors['editor.foreground'];
+    monacoTheme.colors['editor.background'] = themeData.colors['editor.background'];
+    monacoTheme.colors['editor.foreground'] = themeData.colors['editor.foreground'];
 
-  monacoTheme.rules = themeData.tokenColors?.map((token: any) => ({
-    token: token.scope,
-    foreground: token.settings.foreground,
-    background: token.settings.background,
-    fontStyle: token.settings.fontStyle
-  })) ?? [];
+    monacoTheme.rules = themeData.tokenColors?.map((token: any) => ({
+        token: token.scope,
+        foreground: token.settings.foreground,
+        background: token.settings.background,
+        fontStyle: token.settings.fontStyle
+    })) ?? [];
 
-  return monacoTheme;
+    return monacoTheme;
 }
 
 function getMonacoBaseTheme(vscodeThemeType: string | MonacoTheme['base']): MonacoTheme['base'] {
-  switch (vscodeThemeType) {
-    case 'vs':
-    case 'vs-dark':
-    case 'hc-black':
-      return vscodeThemeType;
-    default:
-      return 'vs-dark';
-  }
+    switch (vscodeThemeType) {
+        case 'vs':
+        case 'vs-dark':
+        case 'hc-black':
+            return vscodeThemeType;
+        default:
+            return 'vs-dark';
+    }
 }
 
 export async function getMonacoTheme() {
-  const themeData = await getCurrentThemeData();
-  if (!themeData) {
-    throw new Error('Theme data is undefined');
-  }
-  return convertVSCodeThemeToMonacoTheme(themeData);
+    const themeData = await getCurrentThemeData();
+    if (!themeData) {
+        throw new Error('Theme data is undefined');
+    }
+    return convertVSCodeThemeToMonacoTheme(themeData);
 }
