@@ -16,12 +16,16 @@ export const useVsEvents = defineStore('vscode-backend', () => {
     // // Expose the API after creating the reactive refs
     const frontendApi: ComlinkFrontendApi = {
         setStackTrace: async (st: StackTraceInfo) => {
-            console.log("Setting stack trace", st);
+            const start = Date.now();
+            console.log("Setting stack trace, frames:", st.length);
             stackTrace.value = st;
+            console.log(`setStackTrace completed in ${Date.now() - start}ms`);
         },
         setTheme: (newTheme: MonacoTheme) => {
-            console.log("Setting theme", newTheme);
+            const start = Date.now();
+            console.log("Setting theme");
             theme.value = newTheme;
+            console.log(`setTheme completed in ${Date.now() - start}ms`);
         }
     };
 

@@ -38,6 +38,11 @@
                     "light": "assets/ui-hint.svg"
                 },
                 "shortTitle": "Call Graph"
+            },
+            {
+                "command": "call-graph.show-output",
+                "title": "Show Debug Graph Output Channel",
+                "category": "Debug"
             }
         ],
         "menus": {
