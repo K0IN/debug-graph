@@ -91,7 +91,7 @@
         "eslint": "^8.57.0",
         "glob": "^8.1.0",
         "mocha": "^10.2.0",
-        "ts-loader": "^9.5.1",
+        "ts-loader": "^9.6.0",
         "typescript": "^5.5.3",
         "webpack": "^5.107.2",
         "webpack-cli": "^5.1.4"
