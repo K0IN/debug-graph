@@ -8,19 +8,56 @@ async function getCurrentThemeData(): Promise<object | undefined> {
     const config = workspace.getConfiguration();
     const theme = config.get('workbench.colorTheme') as string;
 
+    // Try to find the extension that contributes this theme
     const extension = extensions.all.find(ext => {
         const contributes = ext.packageJSON.contributes;
-        return contributes && contributes.themes && contributes.themes.some((t: { label: string; }) => t.label === theme);
+        return contributes?.themes?.some((t: { label: string; }) => t.label === theme);
     });
 
-    if (!extension) {
-        return undefined;
+    if (extension) {
+        const themeInfo = extension.packageJSON.contributes.themes.find((t: { label: string; }) => t.label === theme);
+        if (themeInfo?.path) {
+            const themePath = path.join(extension.extensionPath, themeInfo.path);
+            try {
+                return JSON.parse(await readFile(themePath, 'utf8'));
+            } catch {
+                // Failed to read theme file, fall through to fallback
+            }
+        }
     }
 
-    const themeInfo = extension.packageJSON.contributes.themes.find((t: { label: string; }) => t.label === theme);
-    const themePath = path.join(extension.extensionPath, themeInfo.path);
+    // Fallback: try to find the theme in built-in VS Code theme extensions
+    const builtInThemeExt = extensions.all.find(ext =>
+        ext.id.startsWith('vscode.theme-') || ext.id === 'vscode.theme-defaults'
+    );
 
-    return JSON.parse(await readFile(themePath, 'utf8'));
+    if (builtInThemeExt) {
+        const contributes = builtInThemeExt.packageJSON.contributes;
+        if (contributes?.themes) {
+            // Try matching by label again (in case the first pass missed it)
+            const themeInfo = contributes.themes.find((t: { label: string; }) => t.label === theme);
+            if (themeInfo?.path) {
+                const themePath = path.join(builtInThemeExt.extensionPath, themeInfo.path);
+                try {
+                    return JSON.parse(await readFile(themePath, 'utf8'));
+                } catch {
+                    // Fall through
+                }
+            }
+            // If no match by label, try the first dark theme as default
+            const firstDark = contributes.themes.find((t: any) => t.uiTheme === 'vs-dark');
+            if (firstDark?.path) {
+                const themePath = path.join(builtInThemeExt.extensionPath, firstDark.path);
+                try {
+                    return JSON.parse(await readFile(themePath, 'utf8'));
+                } catch {
+                    // Fall through
+                }
+            }
+        }
+    }
+
+    return undefined;
 }
 
 function convertVSCodeThemeToMonacoTheme(themeData: any): MonacoTheme {

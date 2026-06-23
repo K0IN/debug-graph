@@ -10,9 +10,9 @@ function extractMethodName(message: unknown): string {
     if (message && typeof message === 'object') {
         const msg = message as Record<string, unknown>;
         // Comlink wraps calls with {id, type, method, args} or similar
-        if (typeof msg['method'] === 'string') return msg['method'] as string;
-        if (typeof msg['type'] === 'string') return msg['type'] as string;
-        if (Array.isArray(msg['args'])) return `args[${msg['args'].length}]`;
+        if (typeof msg['method'] === 'string') { return msg['method'] as string; }
+        if (typeof msg['type'] === 'string') { return msg['type'] as string; }
+        if (Array.isArray(msg['args'])) { return `args[${msg['args'].length}]`; }
     }
     return 'unknown';
 }

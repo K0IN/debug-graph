@@ -11,3 +11,4 @@ obj/
 *.exe
 .zig-cache
 zig-out
+test_code/go/__debug_bin827944628

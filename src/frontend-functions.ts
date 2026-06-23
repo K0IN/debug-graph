@@ -3,11 +3,8 @@ import { CancellationToken, CancellationTokenSource, commands, debug, DebugStack
 import { getCurrentValueForPosition } from "./inspect";
 import { logDebug, logError, logWarn } from "./log";
 
-// Timeout for debug frame switching (ms)
 const FRAME_SWITCH_TIMEOUT_MS = 5000;
-// Max attempts to switch frames
 const MAX_FRAME_SWITCH_ATTEMPTS = 10;
-// Delay between frame switch attempts (ms)
 const FRAME_SWITCH_DELAY_MS = 200;
 
 async function showFile(path: string, line: number) {
@@ -68,34 +65,37 @@ async function setDebugFrame(frameId: number, token?: CancellationToken) {
 
 
 export const FrontendApi = {
-    showFile: (path: string, line: number) => {
+    showFile: async (path: string, line: number) => {
         const start = Date.now();
         logDebug(`FrontendApi.showFile: path=${path}, line=${line}`);
-        return showFile(path, line).finally(() => {
+        try {
+            await showFile(path, line);
+        } finally {
             logDebug(`FrontendApi.showFile completed in ${Date.now() - start}ms`);
-        });
+        }
     },
-    getValueForPosition: (path: string, line: number, column: number, frameId: number) => {
+    getValueForPosition: async (path: string, line: number, column: number, frameId: number) => {
         const start = Date.now();
         logDebug(`FrontendApi.getValueForPosition: path=${path}, line=${line}, col=${column}, frameId=${frameId}`);
         const source = new CancellationTokenSource();
         // Cancel after timeout to prevent hanging
         setTimeout(() => source.cancel(), 5000);
-        return getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), line, column, frameId, source.token)
-            .then(result => {
-                logDebug(`FrontendApi.getValueForPosition completed in ${Date.now() - start}ms, result=${result ? 'found' : 'not found'}`);
-                return result;
-            })
-            .catch(e => {
-                logError(`FrontendApi.getValueForPosition failed after ${Date.now() - start}ms:`, e);
-                return undefined;
-            });
+        try {
+            const result = await getCurrentValueForPosition(Uri.from({ scheme: 'file', path }), line, column, frameId, source.token);
+            logDebug(`FrontendApi.getValueForPosition completed in ${Date.now() - start}ms, result=${result ? 'found' : 'not found'}`);
+            return result;
+        } catch (e) {
+            logError(`FrontendApi.getValueForPosition failed after ${Date.now() - start}ms:`, e);
+            return undefined;
+        }
     },
-    setFrameId: (frameId: number) => {
+    setFrameId: async (frameId: number) => {
         const start = Date.now();
         logDebug(`FrontendApi.setFrameId: ${frameId}`);
-        return setDebugFrame(frameId).finally(() => {
+        try {
+            await setDebugFrame(frameId);
+        } finally {
             logDebug(`FrontendApi.setFrameId completed in ${Date.now() - start}ms`);
-        });
+        }
     },
 } as ComlinkBackendApi;

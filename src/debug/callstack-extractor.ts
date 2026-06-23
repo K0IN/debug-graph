@@ -39,15 +39,10 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessa
     });
 }
 
-async function getAllSubnodesForSymbol(symbol: DocumentSymbol) {
-    const symbols: DocumentSymbol[] = [];
-    if (symbol.children) {
-        for (const child of symbol.children) {
-            symbols.push(child);
-            symbols.push(...await getAllSubnodesForSymbol(child));
-        }
-    }
-    return symbols;
+async function getAllSubnodesForSymbol(symbol: DocumentSymbol): Promise<DocumentSymbol[]> {
+    const children = symbol.children ?? [];
+    const nested = await Promise.all(children.map(getAllSubnodesForSymbol));
+    return children.concat(...nested);
 }
 
 async function getAllSymbols(file: Uri): Promise<DocumentSymbol[]> {
@@ -106,7 +101,7 @@ async function getLanguageForFile(file: Uri) {
 
 
 async function tryGetCallLocation(file: Uri, frame: DebugProtocol.StackFrame, token: CancellationToken) {
-    if (token?.isCancellationRequested) return undefined;
+    if (token?.isCancellationRequested) { return undefined; }
     const zeroIndexedLine = frame.line - 1;
     const noFunctionLookupSize = 3;
     let symbolLocation: Range | undefined;
@@ -114,7 +109,7 @@ async function tryGetCallLocation(file: Uri, frame: DebugProtocol.StackFrame, to
     try {
         symbolLocation = await getFunctionLocation(file, frame.name, zeroIndexedLine);
     } catch (e) {
-        console.error("Failed to get function location", e);
+        logWarn("Failed to get function location", e);
         symbolLocation = new Range(Math.max(zeroIndexedLine - noFunctionLookupSize, 0), 0, zeroIndexedLine + noFunctionLookupSize, 99999);
     }
 
@@ -175,12 +170,7 @@ async function getCallLocation(frame: DebugProtocol.StackFrame, token: Cancellat
     try {
         logDebug(`getCallLocation frame ${frame.id}: trying workspace file search for ${frame.source.name}`);
         const allFiles = await withTimeout(
-            new Promise<Uri[]>((resolve, reject) => {
-                workspace.findFiles('**/*', null, MAX_WORKSPACE_FILES).then(
-                    (result) => resolve(result),
-                    (err) => reject(err)
-                );
-            }),
+            Promise.resolve(workspace.findFiles('**/*', null, MAX_WORKSPACE_FILES)),
             FILE_SEARCH_TIMEOUT_MS,
             'Workspace file search timed out'
         );

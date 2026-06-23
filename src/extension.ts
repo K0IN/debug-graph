@@ -93,10 +93,12 @@ export async function activate(context: ExtensionContext) {
 
     context.subscriptions.push(workspace.onDidChangeConfiguration(async event => {
         if (event.affectsConfiguration('workbench.colorTheme')) {
-            const theme = await getMonacoTheme();
-            await currentFrontendRpcChannel?.setTheme(theme).catch(e =>
-                console.error('Failed to set theme:', e)
-            );
+            try {
+                const theme = await getMonacoTheme();
+                await currentFrontendRpcChannel?.setTheme(theme);
+            } catch (e) {
+                logError('Failed to set theme:', e);
+            }
         }
     }));
 
@@ -154,10 +156,6 @@ export async function activate(context: ExtensionContext) {
             } else {
                 logDebug('No active debug session, skipping stacktrace load');
             }
-
-            getMonacoTheme()
-                .then(theme => currentFrontendRpcChannel?.setTheme(theme))
-                .catch(e => logError("failed to set theme:", e));
 
         } catch (e: unknown) {
             logError('Failed to create panel:', e);
