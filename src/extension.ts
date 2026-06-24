@@ -52,6 +52,10 @@ async function updateViewWithStackTrace() {
             logDebug('updateViewWithStackTrace was cancelled');
             return;
         }
+        if ((e as Error).message?.includes('debuggee is running')) {
+            logDebug('updateViewWithStackTrace: debuggee is running, stack trace not available yet');
+            return;
+        }
         logError('updateViewWithStackTrace failed:', e);
         window.showErrorMessage('failed to load stacktrace, due to error, please try to open view again. Error: ' + e);
     } finally {
