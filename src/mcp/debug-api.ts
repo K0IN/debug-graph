@@ -1,5 +1,3 @@
-// ── Public API interface exposed via Comlink ──────────────────────────
-
 export interface StackFrameInfo {
     id: number;
     name: string;

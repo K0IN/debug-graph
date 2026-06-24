@@ -30,7 +30,6 @@ async function updateViewWithStackTrace() {
             logError('No rpc channel found, cannot update view');
             throw new Error('No rpc channel found');
         }
-        // Cancel any previous pending update
         currentCancellationSource?.cancel();
         currentCancellationSource = new CancellationTokenSource();
 
@@ -43,7 +42,6 @@ async function updateViewWithStackTrace() {
         logDebug(`RPC call: setStackTrace completed in ${Date.now() - setStackStart}ms`);
         logDebug(`updateViewWithStackTrace completed in ${Date.now() - updateStart}ms`);
     } catch (e: unknown) {
-        // Don't show error if it's a cancellation
         if ((e as Error).message?.includes('cancell')) {
             logDebug('updateViewWithStackTrace was cancelled');
             return;
@@ -62,7 +60,6 @@ export async function activate(context: ExtensionContext) {
     let isInitializing = false;
     let pendingUpdate = false;
 
-    // ── MCP Debug Bridge ──────────────────────────────────────────────
     const debugBridge = new DebugBridge();
     try {
         await debugBridge.start();
@@ -72,7 +69,6 @@ export async function activate(context: ExtensionContext) {
         logError('Failed to start DebugBridge, MCP tools will be unavailable:', e);
     }
 
-    // ── MCP Server Definition Provider ────────────────────────────────
     const MCP_PROVIDER_ID = 'debugGraph.mcpProvider';
 
     context.subscriptions.push(
@@ -98,15 +94,12 @@ export async function activate(context: ExtensionContext) {
             },
 
             resolveMcpServerDefinition: async (server: McpStdioServerDefinition, _token: CancellationToken) => {
-                // The server is already fully configured — just return it.
-                // If you needed to prompt for credentials or config, do it here.
                 return server;
             },
         }),
     );
     logInfo('MCP server definition provider registered');
 
-    // started debug session
     const updateView = () => {
         if (!currentPanel || !currentPanel.visible) {
             logDebug('updateView skipped: no panel or not visible');
@@ -129,9 +122,7 @@ export async function activate(context: ExtensionContext) {
     };
 
     context.subscriptions.push(debug.onDidStartDebugSession(updateView));
-    // step into, step out, step over, change active stack item, change active debug session, receive custom event
     context.subscriptions.push(debug.onDidChangeActiveStackItem(updateView));
-    // stopped/started/changed debug session
     context.subscriptions.push(debug.onDidChangeActiveDebugSession(updateView));
 
     context.subscriptions.push(
@@ -149,7 +140,6 @@ export async function activate(context: ExtensionContext) {
 
                 isInitializing = true;
 
-                // Set up Comlink channel FIRST, before any wait or debug events
                 const comlinkChannel = getComlinkChannel(currentPanel.webview, context);
                 Comlink.expose(FrontendApi, comlinkChannel);
                 logDebug('FrontendApi exposed via Comlink');
@@ -157,7 +147,6 @@ export async function activate(context: ExtensionContext) {
                 currentFrontendRpcChannel = Comlink.wrap<ComlinkFrontendApi>(comlinkChannel);
                 logDebug('Frontend RPC channel created');
 
-                // Clean up previous panel references
                 currentPanel.onDidDispose(() => {
                     logDebug('Webview panel disposed');
                     currentCancellationSource?.cancel();
@@ -167,12 +156,10 @@ export async function activate(context: ExtensionContext) {
                     currentFrontendRpcChannel = undefined;
                 });
 
-                // Set HTML and wait for webview to load
                 currentPanel.webview.html = getVueFrontendPanelContent(context, currentPanel);
                 logDebug('Waiting 1s for webview to load');
                 await new Promise((resolve) => setTimeout(resolve, 1000));
 
-                // Handle any debug events that fired during initialization
                 isInitializing = false;
                 if (pendingUpdate) {
                     logDebug('Triggering deferred update from initialization period');
@@ -196,7 +183,6 @@ export async function activate(context: ExtensionContext) {
         }),
     );
 
-    // Command to show the debug output channel
     context.subscriptions.push(
         commands.registerCommand('call-graph.show-output', () => {
             showOutputChannel();

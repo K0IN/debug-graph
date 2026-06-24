@@ -1,14 +1,3 @@
-/**
- * Shared Comlink TCP transport.
- *
- * Wraps a `net.Socket` into a Comlink `Endpoint` that both sides of the
- * bridge use to communicate.  Messages are JSON-framed with newline
- * delimiters.
- *
- * Because this module must work in both the CJS webpack bundle (extension
- * host) and the ESM standalone MCP server, keep imports to a minimum.
- */
-
 import * as net from 'net';
 
 export function comlinkEndpointFromSocket(socket: net.Socket) {
@@ -27,9 +16,7 @@ export function comlinkEndpointFromSocket(socket: net.Socket) {
                 for (const listener of listeners) {
                     listener({ data: msg });
                 }
-            } catch {
-                // Non-JSON chunk — skip
-            }
+            } catch {}
         }
     });
 
@@ -46,8 +33,6 @@ export function comlinkEndpointFromSocket(socket: net.Socket) {
         removeEventListener(_type: string, listener: (event: { data: unknown }) => void) {
             listeners.delete(listener);
         },
-        start() {
-            // socket is already open
-        },
+        start() {},
     };
 }

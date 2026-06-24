@@ -7,8 +7,6 @@ import type { DebugProtocol } from '@vscode/debugprotocol';
 import { comlinkEndpointFromSocket } from './transport';
 import type { DebugApi } from './debug-api';
 
-// ── Bridge Server (runs inside extension host) ────────────────────────
-
 export class DebugBridge {
     private server: net.Server | undefined;
     private _port = 0;
@@ -28,7 +26,6 @@ export class DebugBridge {
                 reject(err);
             });
 
-            // Bind to a random port on localhost
             this.server.listen(0, '127.0.0.1', () => {
                 const addr = this.server?.address();
                 if (addr && typeof addr === 'object') {
@@ -45,16 +42,12 @@ export class DebugBridge {
         this.server = undefined;
     }
 
-    // ── Socket handling ───────────────────────────────────────────────
-
     private handleSocket(socket: net.Socket): void {
         logDebug('DebugBridge: client connected');
         const endpoint = comlinkEndpointFromSocket(socket);
         expose(this.api, endpoint);
         logDebug('DebugBridge: Comlink API exposed on socket');
     }
-
-    // ── Debug API implementation ──────────────────────────────────────
 
     private api: DebugApi = {
         getActiveSession: async () => {
