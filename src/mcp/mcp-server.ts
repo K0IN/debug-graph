@@ -11,7 +11,6 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import type { Server } from 'http';
 import { z } from 'zod';
 import { debug, commands, workspace, SourceBreakpoint, FunctionBreakpoint, Location, Range, Uri } from 'vscode';
-import { logInfo } from '../log';
 import { callDebugFunction } from '../inspect/typed-debug';
 import type { DebugProtocol } from '@vscode/debugprotocol';
 
