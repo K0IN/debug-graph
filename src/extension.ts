@@ -76,7 +76,7 @@ export async function activate(context: ExtensionContext) {
             provideMcpServerDefinitions: async (_token: CancellationToken) => {
                 const serverPath = process.env['VSCODE_MCP_SERVER_PATH']
                     ? Uri.file(process.env['VSCODE_MCP_SERVER_PATH'])
-                    : Uri.joinPath(context.extensionUri, 'dist', 'mcp-server.mjs');
+                    : Uri.joinPath(context.extensionUri, 'dist', 'mcp-server.js');
 
                 return [
                     new McpStdioServerDefinition(
@@ -86,7 +86,6 @@ export async function activate(context: ExtensionContext) {
                         {
                             DEBUG_BRIDGE_PORT: String(debugBridge.port),
                             DEBUG_GRAPH_VERSION: context.extension.packageJSON.version,
-                            ELECTRON_RUN_AS_NODE: '1',
                         },
                         context.extension.packageJSON.version,
                     ),

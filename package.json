@@ -23,6 +23,7 @@
         "Visualization"
     ],
     "activationEvents": [
+        "onFinishedLoading",
         "onDebug",
         "onWebviewPanel:graph-visualization"
     ],
@@ -73,7 +74,7 @@
         "watch-frontend": "cd frontend && npm run watch",
         "lint": "eslint . --ext ts",
         "compile": "webpack && npm run compile:mcp",
-        "compile:mcp": "tsc -p tsconfig.mcp.json",
+        "compile:mcp": "esbuild src/mcp-server.ts --bundle --platform=node --target=node22 --outfile=dist/mcp-server.js --format=cjs --external:vscode",
         "watch": "npm run compile-frontend && webpack --watch",
         "lint-all": "npm run lint && npm run lint-frontend",
         "compile-all": "npm run compile && npm run compile-frontend",
@@ -95,6 +96,7 @@
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.4.1",
         "@vscode/vsce": "^2.31.1",
+        "esbuild": "^0.28.1",
         "eslint": "^8.57.0",
         "glob": "^8.1.0",
         "mocha": "^10.2.0",

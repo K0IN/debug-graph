@@ -3,8 +3,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/server';
 import * as net from 'net';
 import { wrap } from 'comlink';
 import { z } from 'zod';
-import { comlinkEndpointFromSocket } from './mcp/transport.js';
-import type { DebugApi } from './mcp/debug-api.js';
+import { comlinkEndpointFromSocket } from './mcp/transport';
+import type { DebugApi } from './mcp/debug-api';
 
 function logStderr(...args: unknown[]): void {
     process.stderr.write(`[debug-graph-mcp] ${args.map((a) => String(a)).join(' ')}\n`);

@@ -27,11 +27,11 @@ export function comlinkEndpointFromSocket(socket: net.Socket) {
         postMessage(msg: unknown) {
             socket.write(JSON.stringify(msg) + '\n');
         },
-        addEventListener(_type: string, listener: (event: { data: unknown }) => void) {
-            listeners.add(listener);
+        addEventListener(_type: string, listener: (...args: any[]) => void, _options?: {}) {
+            listeners.add(listener as (event: { data: unknown }) => void);
         },
-        removeEventListener(_type: string, listener: (event: { data: unknown }) => void) {
-            listeners.delete(listener);
+        removeEventListener(_type: string, listener: (...args: any[]) => void, _options?: {}) {
+            listeners.delete(listener as (event: { data: unknown }) => void);
         },
         start() {},
     };

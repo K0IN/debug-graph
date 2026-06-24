@@ -23,7 +23,7 @@
         "frontend/**/*", // Exclude the inner project
         "shared/**/*", // Exclude the shared project 
         "node_modules",
-        "src/mcp-server.mts" // Exclude MCP server (built separately as ESM)
+        "src/mcp-server.ts" // MCP server bundled separately via esbuild
     ],
     "include": [
         "src/**/*"

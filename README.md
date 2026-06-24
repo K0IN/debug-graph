@@ -18,7 +18,7 @@ This extension is designed to work with **all languages** supported by Visual St
 
 | Language | Debugger | Linux | Windows | Notes |
 | --- | --- | --- | --- | --- |
-| Go | golang | ✅ | ✅ | |
+| Go | golang | ✅ | ✅ | delve |
 | Python | [debugpy](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) | ✅ | ✅ | |
 | JavaScript | Node | ❔ | ✅ | using node.js runtime |
 | TypeScript | pwa-node | ✅ | ✅ | using Deno runtime |
