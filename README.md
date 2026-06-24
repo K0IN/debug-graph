@@ -10,7 +10,53 @@ A Visual Studio Code extension that visualizes the function calls (code paths) l
 - **Multi-language support** — Works with Go, Python, JavaScript, TypeScript, C++, C, Rust, C#, Zig, and more
 - **Variable inspection** — Hover over any stack frame to view variables and their values at that point in execution
 - **Source-code navigation** — Click any frame in the graph to jump directly to the corresponding line in the editor
-- **MCP-powered AI debugging** — Exposes all debug capabilities as MCP tools so AI agents can help you inspect and step through code (see [MCP Server](#-mcp-server--debugging-skills-for-ai-agents) section)
+- **MCP-powered AI debugging** — Exposes debug tools so AI agents can inspect and step through code (see [MCP Server](#-mcp-server---let-your-agent-control-your-debug-session))
+
+## 🤖 MCP Server - Let your agent control your debug session
+
+Debug Graph includes a built-in **MCP (Model Context Protocol) server**. It lets AI agents use the VS Code debugger directly.
+
+The MCP server exposes **18 tools** that let an agent interact with the VS Code debugger directly:
+
+| Tool | What it does |
+|---|---|
+| `list_debug_configs` | Reads `.vscode/launch.json` and returns available debug configurations. |
+| `list_breakpoints` | Shows existing breakpoints. |
+| `set_breakpoint` | Adds a breakpoint and returns its id. |
+| `remove_breakpoint` | Removes a breakpoint by id. |
+| `start_debug` | Starts debugging. Supports `configName`, or `type` + `name` + `request`, plus `program`, `args`, `env`, and `cwd`. Returns `{id, name, type}`. |
+| `stop_debug` | Stops the current debug session. |
+| `restart` | Stops and restarts a debug session with a `configName`. |
+| `get_active_session` | Shows the current debug session, or `null`. |
+| `wait_for_breakpoint_hit` | Waits until the program pauses after start, resume, or step. |
+| `list_threads` | Lists all threads in the debugged program. |
+| `get_stack_trace` | Shows the paused call stack (optionally for a specific thread). |
+| `get_variables` | Shows variables from all scopes in the current frame. |
+| `evaluate` | Runs an expression in the paused program (⚠️ executes in the real program — avoid side effects). |
+| `step_over` | Runs the next line without entering functions. |
+| `step_into` | Enters the called function. |
+| `step_out` | Leaves the current function. |
+| `resume` | Continues running. |
+| `pause` | Pauses the running program. |
+
+Simple workflow for agents:
+
+1. Call `list_debug_configs` to see available configurations.
+2. Call `get_active_session` to check if a session is already running.
+3. Call `list_breakpoints` and `set_breakpoint` for each target line.
+4. Call `start_debug` or `restart`.
+5. Call `wait_for_breakpoint_hit` if the program is running.
+6. Inspect with `get_stack_trace`, `get_variables`, `list_threads`, or `evaluate`.
+7. Move with `step_over`, `step_into`, `step_out`, `resume`, or `pause`.
+8. Call `stop_debug` when done.
+
+### 🧠 Built-in MCP Prompt for Agents
+
+The MCP server publishes a **`debug_session_workflow` prompt**. Agents should call it before using the debug tools.
+
+Use this when you want an agent to find real runtime values instead of guessing from static code.
+
+> **Typed outputs** — The 8 inspection tools (`get_active_session`, `list_debug_configs`, `get_stack_trace`, `list_threads`, `get_variables`, `list_breakpoints`, `wait_for_breakpoint_hit`, `set_breakpoint`) publish `outputSchema` (JSON Schema) so AI clients know the exact return shape before calling the tool.
 
 ## 🚀 Requirements
 
@@ -64,24 +110,3 @@ For bug reports or feature requests, please visit our [GitHub Repository](https:
 - [Vue.js](https://vuejs.org/) (for the frontend)
 - [Comlink](https://github.com/GoogleChromeLabs/comlink) (for communication between the frontend and backend)
 
-## 🤖 MCP Server — Debugging Skills for AI Agents
-
-Debug Graph ships with a built-in **MCP (Model Context Protocol) server** that gives AI coding agents (like GitHub Copilot) hands-on debugging capabilities. It effectively **adds debugging to the list of skills your agent can do**.
-
-The MCP server exposes **12 tools** that let an agent interact with the VS Code debugger directly:
-
-| Category | Tools |
-|---|---|
-| **Breakpoints** | `set_breakpoint`, `list_breakpoints` |
-| **Session Control** | `start_debug`, `get_active_session` |
-| **Inspection** | `get_stack_trace`, `get_variables`, `evaluate` |
-| **Stepping** | `step_over`, `step_into`, `step_out` |
-| **Execution** | `resume`, `pause` |
-
-An agent can set breakpoints, launch debug sessions, inspect stack frames and variables, evaluate expressions, and control execution — all through natural language.
-
-### 🧠 Built-in MCP Prompt for Agents
-
-The MCP server publishes a **`debug_session_workflow` prompt** that any agent harness can invoke via the [MCP Prompt](https://modelcontextprotocol.io/docs/concepts/prompts) mechanism. Calling this prompt returns step-by-step instructions for the correct debug workflow.
-
-With that prompt template, just ask your agent, what to debug, or to lookup the real value instead of static analysis. The agent will then use the MCP tools to inspect the execution and provide you with the answer.

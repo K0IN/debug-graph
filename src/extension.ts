@@ -60,6 +60,8 @@ async function updateViewWithStackTrace() {
     }
 }
 
+let _mcpCleanup: (() => Promise<void>) | undefined;
+
 export async function activate(context: ExtensionContext) {
     let currentPanel: WebviewPanel | undefined = undefined;
     let isUpdating = false;
@@ -71,6 +73,7 @@ export async function activate(context: ExtensionContext) {
     const mcpChangeEmitter = new EventEmitter<void>();
     let mcpHttpServer: http.Server | undefined = undefined;
     let mcpActive = false;
+    let mcpStartGeneration = 0;
 
     function mcpEnabled(): boolean {
         return workspace.getConfiguration().get<boolean>(MCP_CONFIG_KEY, true);
@@ -85,6 +88,7 @@ export async function activate(context: ExtensionContext) {
             logDebug('MCP already active, skipping start');
             return;
         }
+        const gen = ++mcpStartGeneration;
         try {
             // Load the esbuild-bundled MCP module (inlines @modelcontextprotocol/*)
             const modulePath = path.join(context.extensionUri.fsPath, 'dist', 'mcp-server.js');
@@ -106,23 +110,46 @@ export async function activate(context: ExtensionContext) {
                 });
             });
 
+            // Check if stopMcp() was called while we were starting
+            if (gen !== mcpStartGeneration) {
+                server.close();
+                logDebug('MCP start cancelled (generation mismatch)');
+                return;
+            }
+
             mcpHttpServer = server;
             mcpActive = true;
             mcpChangeEmitter.fire();
             logInfo('MCP server started');
         } catch (e) {
+            if (gen !== mcpStartGeneration) {
+                logDebug('MCP start error ignored (generation mismatch)');
+                return;
+            }
             logError('Failed to start MCP:', e);
-            mcpActive = false;
         }
     }
 
     async function stopMcp(): Promise<void> {
         logInfo('Stopping MCP server');
-        mcpHttpServer?.close();
-        mcpHttpServer = undefined;
         mcpActive = false;
+        mcpStartGeneration++; // Invalidate any in-flight startMcp()
+        const server = mcpHttpServer;
+        mcpHttpServer = undefined;
+        if (server) {
+            await new Promise<void>((resolve) => {
+                server.close(() => resolve());
+                // Force cleanup after 5s to avoid hanging
+                setTimeout(() => {
+                    server.closeAllConnections?.();
+                    resolve();
+                }, 5000);
+            });
+        }
         mcpChangeEmitter.fire();
     }
+
+    _mcpCleanup = stopMcp;
 
     // Start MCP on activation if enabled
     await startMcp();
@@ -177,9 +204,7 @@ export async function activate(context: ExtensionContext) {
             }
             try {
                 logInfo('Restarting MCP server...');
-                mcpHttpServer?.close();
-                mcpHttpServer = undefined;
-                mcpActive = false;
+                await stopMcp();
                 await startMcp();
                 logInfo('MCP server restarted successfully');
                 window.showInformationMessage('Debug Graph MCP server restarted');
@@ -288,4 +313,10 @@ export async function activate(context: ExtensionContext) {
             },
         }),
     );
+}
+
+export async function deactivate(): Promise<void> {
+    if (_mcpCleanup) {
+        await _mcpCleanup();
+    }
 }
