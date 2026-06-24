@@ -23,11 +23,28 @@
         "Visualization"
     ],
     "activationEvents": [
+        "onFinishedLoading",
         "onDebug",
         "onWebviewPanel:graph-visualization"
     ],
     "main": "./dist/extension.js",
     "contributes": {
+        "configuration": {
+            "title": "Debug Graph",
+            "properties": {
+                "debug-graph.mcp.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable the Debug Graph MCP server. Restart VS Code or run 'Debug: Restart MCP Server' after changing."
+                }
+            }
+        },
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "debugGraph.mcpProvider",
+                "label": "Debug Graph MCP Server"
+            }
+        ],
         "commands": [
             {
                 "command": "call-graph.show-call-graph",
@@ -43,6 +60,11 @@
                 "command": "call-graph.show-output",
                 "title": "Show Debug Graph Output Channel",
                 "category": "Debug"
+            },
+            {
+                "command": "call-graph.restart-mcp",
+                "title": "Restart MCP Server",
+                "category": "Debug"
             }
         ],
         "menus": {
@@ -57,16 +79,17 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run vscode:package",
-        "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map",
+        "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map && npm run compile:mcp",
         "vscode:bundle": "npm run vscode:package && vsce package",
-        "vscode:install": "npm run vscode:bundle && code --install-extension call-graph-0.0.1.vsix",
+        "vscode:install": "npm run vscode:bundle && code --install-extension debug-graph-*.vsix",
         "vscode:uninstall": "code --uninstall k0in.call-graph",
         "vscode:publish": "npm run vscode:bundle && vsce publish",
         "lint-frontend": "cd frontend && npm run lint",
         "compile-frontend": "cd frontend && npm run build",
         "watch-frontend": "cd frontend && npm run watch",
         "lint": "eslint . --ext ts",
-        "compile": "webpack",
+        "compile": "webpack && npm run compile:mcp",
+        "compile:mcp": "esbuild src/mcp/mcp-server.ts --bundle --platform=node --target=node22 --outfile=dist/mcp-server.js --format=cjs --external:vscode",
         "watch": "npm run compile-frontend && webpack --watch",
         "lint-all": "npm run lint && npm run lint-frontend",
         "compile-all": "npm run compile && npm run compile-frontend",
@@ -88,6 +111,7 @@
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.4.1",
         "@vscode/vsce": "^2.31.1",
+        "esbuild": "^0.28.1",
         "eslint": "^8.57.0",
         "glob": "^8.1.0",
         "mocha": "^10.2.0",
@@ -97,12 +121,14 @@
         "webpack-cli": "^5.1.4"
     },
     "dependencies": {
+        "@cfworker/json-schema": "^4.1.1",
         "@modelcontextprotocol/client": "^2.0.0-alpha.2",
+        "@modelcontextprotocol/node": "^2.0.0-alpha.2",
         "@modelcontextprotocol/server": "^2.0.0-alpha.2",
         "@vscode/debugprotocol": "^1.66.0",
         "comlink": "^4.4.1",
         "shared": "file:shared",
-        "zod": "^3.25.0-beta.20250519T094321"
+        "zod": "^4.4.3"
     },
     "bugs": {
         "url": "https://github.com/K0IN/stacktrace-history/issues"
