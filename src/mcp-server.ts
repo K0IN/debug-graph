@@ -211,13 +211,16 @@ Call this prompt first whenever you need to debug something. It will give you th
                         type: 'text' as const,
                         text: `You are about to start a debugging session. Follow this workflow in order:
 
-STEP 1 — Set breakpoints
+STEP 1 — Review existing breakpoints
+Use the "list_breakpoints" tool first to check for breakpoints that may already exist from your session. Be aware that other breakpoints might be present — make yourself familiar with all currently set breakpoints.
+
+STEP 2 — Set breakpoints
 Use the "set_breakpoint" tool to set breakpoints at the file:line(s) you care about before starting the debug session. You can set one or more breakpoints.
 
-STEP 2 — Start debugging
+STEP 3 — Start debugging
 Use the "start_debug" tool with the appropriate configuration (type like "node", "python", "go"; and program path, or a named launch config).
 
-STEP 3 — Interact with the session
+STEP 4 — Interact with the session
 Once a breakpoint is hit, you can:
 - "get_stack_trace" — see the call stack
 - "get_variables" — inspect variable values (optionally pass a frameId)
