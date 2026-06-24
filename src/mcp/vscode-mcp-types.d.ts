@@ -16,13 +16,21 @@ declare module 'vscode' {
         readonly version?: string;
     }
 
+    export class McpHttpServerDefinition {
+        constructor(label: string, uri: vscode.Uri, headers?: Record<string, string>, version?: string);
+        readonly label: string;
+        uri: vscode.Uri;
+        headers: Record<string, string>;
+        readonly version?: string;
+    }
+
     export interface McpServerDefinitionProvider {
         onDidChangeMcpServerDefinitions?: vscode.Event<void>;
-        provideMcpServerDefinitions(token: vscode.CancellationToken): vscode.ProviderResult<McpStdioServerDefinition[]>;
+        provideMcpServerDefinitions(token: vscode.CancellationToken): vscode.ProviderResult<McpHttpServerDefinition[]>;
         resolveMcpServerDefinition?(
-            server: McpStdioServerDefinition,
+            server: McpHttpServerDefinition,
             token: vscode.CancellationToken,
-        ): vscode.ProviderResult<McpStdioServerDefinition>;
+        ): vscode.ProviderResult<McpHttpServerDefinition>;
     }
 
     export namespace lm {

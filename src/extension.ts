@@ -3,12 +3,14 @@ import {
     CancellationTokenSource,
     commands,
     debug,
+    EventEmitter,
     ExtensionContext,
     lm,
-    McpStdioServerDefinition,
+    McpHttpServerDefinition,
     Uri,
     WebviewPanel,
     window,
+    workspace,
 } from 'vscode';
 import { ComlinkFrontendApi } from 'shared/src/index';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
@@ -17,7 +19,11 @@ import { getComlinkChannel } from './webview/messaging';
 import { getStacktraceInfo } from './debug/callstack-extractor';
 import { FrontendApi } from './frontend-functions';
 import { logInfo, logError, logDebug, showOutputChannel } from './log';
-import { DebugBridge } from './mcp/debug-bridge';
+import * as http from 'http';
+import * as path from 'path';
+
+// Provided by webpack at runtime to bypass bundling for dynamic requires
+declare const __non_webpack_require__: typeof require;
 
 let currentFrontendRpcChannel: Comlink.Remote<ComlinkFrontendApi> | undefined = undefined;
 let currentCancellationSource: CancellationTokenSource | undefined = undefined;
@@ -60,44 +66,129 @@ export async function activate(context: ExtensionContext) {
     let isInitializing = false;
     let pendingUpdate = false;
 
-    const debugBridge = new DebugBridge();
-    try {
-        await debugBridge.start();
-        context.subscriptions.push({ dispose: () => debugBridge.dispose() });
-        logInfo(`DebugBridge started on port ${debugBridge.port}`);
-    } catch (e) {
-        logError('Failed to start DebugBridge, MCP tools will be unavailable:', e);
+    const MCP_CONFIG_KEY = 'debug-graph.mcp.enabled';
+    const MCP_PROVIDER_ID = 'debugGraph.mcpProvider';
+    const mcpChangeEmitter = new EventEmitter<void>();
+    let mcpHttpServer: http.Server | undefined = undefined;
+    let mcpActive = false;
+
+    function mcpEnabled(): boolean {
+        return workspace.getConfiguration().get<boolean>(MCP_CONFIG_KEY, true);
     }
 
-    const MCP_PROVIDER_ID = 'debugGraph.mcpProvider';
+    async function startMcp(): Promise<void> {
+        if (!mcpEnabled()) {
+            logInfo('MCP disabled by setting, skipping start');
+            return;
+        }
+        if (mcpActive) {
+            logDebug('MCP already active, skipping start');
+            return;
+        }
+        try {
+            // Load the esbuild-bundled MCP module (inlines @modelcontextprotocol/*)
+            const modulePath = path.join(context.extensionUri.fsPath, 'dist', 'mcp-server.js');
+            const mcpModule = (__non_webpack_require__ || require)(modulePath) as {
+                handleStreamableHttp: (server: http.Server) => void;
+            };
+
+            const server = http.createServer();
+            mcpModule.handleStreamableHttp(server);
+
+            await new Promise<void>((resolve, reject) => {
+                server.on('error', reject);
+                server.listen(0, '127.0.0.1', () => {
+                    const addr = server.address();
+                    if (addr && typeof addr === 'object') {
+                        logInfo(`MCP HTTP server listening on ${addr.address}:${addr.port}`);
+                    }
+                    resolve();
+                });
+            });
+
+            mcpHttpServer = server;
+            mcpActive = true;
+            mcpChangeEmitter.fire();
+            logInfo('MCP server started');
+        } catch (e) {
+            logError('Failed to start MCP:', e);
+            mcpActive = false;
+        }
+    }
+
+    async function stopMcp(): Promise<void> {
+        logInfo('Stopping MCP server');
+        mcpHttpServer?.close();
+        mcpHttpServer = undefined;
+        mcpActive = false;
+        mcpChangeEmitter.fire();
+    }
+
+    // Start MCP on activation if enabled
+    await startMcp();
+
+    // Watch for config changes
+    context.subscriptions.push(
+        workspace.onDidChangeConfiguration((e) => {
+            if (e.affectsConfiguration(MCP_CONFIG_KEY)) {
+                logInfo('MCP configuration changed');
+                if (mcpEnabled()) {
+                    startMcp();
+                } else {
+                    stopMcp();
+                }
+            }
+        }),
+    );
 
     context.subscriptions.push(
         lm.registerMcpServerDefinitionProvider(MCP_PROVIDER_ID, {
-            provideMcpServerDefinitions: async (_token: CancellationToken) => {
-                const serverPath = process.env['VSCODE_MCP_SERVER_PATH']
-                    ? Uri.file(process.env['VSCODE_MCP_SERVER_PATH'])
-                    : Uri.joinPath(context.extensionUri, 'dist', 'mcp-server.js');
+            onDidChangeMcpServerDefinitions: mcpChangeEmitter.event,
 
-                return [
-                    new McpStdioServerDefinition(
-                        'Debug Graph MCP',
-                        process.execPath,
-                        [serverPath.fsPath],
-                        {
-                            DEBUG_BRIDGE_PORT: String(debugBridge.port),
-                            DEBUG_GRAPH_VERSION: context.extension.packageJSON.version,
-                        },
-                        context.extension.packageJSON.version,
-                    ),
-                ];
+            provideMcpServerDefinitions: async (_token: CancellationToken) => {
+                if (!mcpActive || !mcpHttpServer) {
+                    return [];
+                }
+
+                const addr = mcpHttpServer.address();
+                if (!addr || typeof addr !== 'object') {
+                    return [];
+                }
+
+                const uri = Uri.parse(`http://127.0.0.1:${addr.port}/mcp`);
+
+                return [new McpHttpServerDefinition('Debug Graph MCP', uri, {}, context.extension.packageJSON.version)];
             },
 
-            resolveMcpServerDefinition: async (server: McpStdioServerDefinition, _token: CancellationToken) => {
+            resolveMcpServerDefinition: async (server: McpHttpServerDefinition, _token: CancellationToken) => {
                 return server;
             },
         }),
     );
     logInfo('MCP server definition provider registered');
+
+    context.subscriptions.push(
+        commands.registerCommand('call-graph.restart-mcp', async () => {
+            if (!mcpEnabled()) {
+                window.showWarningMessage(
+                    'Debug Graph MCP is disabled. Enable it with the "debug-graph.mcp.enabled" setting.',
+                );
+                return;
+            }
+            try {
+                logInfo('Restarting MCP server...');
+                mcpHttpServer?.close();
+                mcpHttpServer = undefined;
+                mcpActive = false;
+                await startMcp();
+                logInfo('MCP server restarted successfully');
+                window.showInformationMessage('Debug Graph MCP server restarted');
+            } catch (e) {
+                logError('Failed to restart MCP server:', e);
+                window.showErrorMessage(`Failed to restart MCP server: ${e}`);
+            }
+        }),
+    );
 
     const updateView = () => {
         if (!currentPanel || !currentPanel.visible) {
