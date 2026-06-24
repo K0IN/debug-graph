@@ -1,8 +1,8 @@
 export type SerializedRange = {
-    startLine: number;            // zero-based
-    startCharacter: number;       // zero-based
-    endLine?: number;             // zero-based
-    endCharacter?: number;        // zero-based
+    startLine: number; // zero-based
+    startCharacter: number; // zero-based
+    endLine?: number; // zero-based
+    endCharacter?: number; // zero-based
 };
 
 export interface CallLocation {
@@ -16,26 +16,11 @@ export interface CallLocation {
 
 export type StackTraceInfo = CallLocation[];
 
-export type MonacoTheme = {
-    base: 'vs' | 'vs-dark' | 'hc-black';
-    inherit: boolean;
-    rules: {
-        token: string;
-        foreground: string;
-        background: string;
-        fontStyle: string;
-    }[];
-    colors: {
-        [key: string]: string;
-    };
-};
-
-
 export type VariableInfo = {
-    name: string,
-    value: string,
-    type?: string,
-    subVariables?: VariableInfo[]
+    name: string;
+    value: string;
+    type?: string;
+    subVariables?: VariableInfo[];
 };
 
 export type ValueLookupResult = {
@@ -46,11 +31,15 @@ export type ValueLookupResult = {
 
 export type ComlinkFrontendApi = {
     setStackTrace: (stackTrace: StackTraceInfo) => void;
-    setTheme: (newTheme: MonacoTheme) => void;
 };
 
 export type ComlinkBackendApi = {
     showFile: (path: string, line: number) => void;
-    getValueForPosition: (path: string, line: number, column: number, frameId: number) => Promise<ValueLookupResult | undefined>;
+    getValueForPosition: (
+        path: string,
+        line: number,
+        column: number,
+        frameId: number,
+    ) => Promise<ValueLookupResult | undefined>;
     setFrameId: (frameId: number) => void;
 };

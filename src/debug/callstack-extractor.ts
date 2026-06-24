@@ -1,9 +1,9 @@
-import { CancellationToken, debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from "vscode";
-import { executeDocumentSymbolProvider } from "./typed-commands";
-import { CallLocation, StackTraceInfo } from "shared/src/index";
-import { callDebugFunction } from "../inspect/typed-debug";
-import { DebugProtocol } from "@vscode/debugprotocol";
-import { logDebug, logWarn } from "../log";
+import { CancellationToken, debug, DocumentSymbol, Range, SymbolKind, Uri, workspace } from 'vscode';
+import { executeDocumentSymbolProvider } from './typed-commands';
+import { CallLocation, StackTraceInfo } from 'shared/src/index';
+import { callDebugFunction } from '../inspect/typed-debug';
+import { DebugProtocol } from '@vscode/debugprotocol';
+import { logDebug, logWarn } from '../log';
 
 // Concurrency limit for parallel file operations
 const MAX_CONCURRENT_FRAMES = 5;
@@ -33,8 +33,14 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessa
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
         promise.then(
-            (val) => { clearTimeout(timer); resolve(val); },
-            (err) => { clearTimeout(timer); reject(err); }
+            (val) => {
+                clearTimeout(timer);
+                resolve(val);
+            },
+            (err) => {
+                clearTimeout(timer);
+                reject(err);
+            },
         );
     });
 }
@@ -53,39 +59,43 @@ async function getAllSymbols(file: Uri): Promise<DocumentSymbol[]> {
     const symbols: DocumentSymbol[] = [];
     for (const symbol of documentSymbols) {
         symbols.push(symbol);
-        symbols.push(...await getAllSubnodesForSymbol(symbol));
+        symbols.push(...(await getAllSubnodesForSymbol(symbol)));
     }
     return symbols;
 }
 
-
 async function findSymbolForLine(file: Uri, zeroIndexedLine: number) {
     const documentSymbols = await getAllSymbols(file);
     return documentSymbols
-        .filter(symbol => symbol.range.start.line <= zeroIndexedLine && zeroIndexedLine <= symbol.range.end.line)
-        .sort((a, b) => (a.range.end.line - a.range.start.line) - (b.range.end.line - b.range.start.line));
+        .filter((symbol) => symbol.range.start.line <= zeroIndexedLine && zeroIndexedLine <= symbol.range.end.line)
+        .sort((a, b) => a.range.end.line - a.range.start.line - (b.range.end.line - b.range.start.line));
 }
-
 
 async function getFunctionLocation(file: Uri, name: string, zeroIndexedLine: number): Promise<Range> {
     const documentSymbols = await findSymbolForLine(file, zeroIndexedLine);
-    const allFunctions = documentSymbols
-        .filter(symbol => symbol.kind === SymbolKind.Function || symbol.kind === SymbolKind.Method || symbol.kind === SymbolKind.Constructor); // avoid getting duplicate symbols
+    const allFunctions = documentSymbols.filter(
+        (symbol) =>
+            symbol.kind === SymbolKind.Function ||
+            symbol.kind === SymbolKind.Method ||
+            symbol.kind === SymbolKind.Constructor,
+    ); // avoid getting duplicate symbols
 
     // in go functions in the stack frame are spelled module.function name, so we WONT find it, best we can do is try to match it and fall back to line number
-    const exactMatch = allFunctions.find(symbol => symbol.name === name);
+    const exactMatch = allFunctions.find((symbol) => symbol.name === name);
 
     if (exactMatch && exactMatch.range) {
         return exactMatch.range;
     } else if (allFunctions.length === 1) {
         return allFunctions[0].range;
-    } else if (allFunctions.find(symbol => symbol.name.includes(name))) {
-        return allFunctions.find(symbol => symbol.name.includes(name))!.range;
+    } else {
+        const partialMatch = allFunctions.find((symbol) => symbol.name.includes(name));
+        if (partialMatch) {
+            return partialMatch.range;
+        }
     }
 
-    throw new Error("Symbol not found");
+    throw new Error('Symbol not found');
 }
-
 
 async function getCodeAtRange(file: Uri, range: Range): Promise<string | undefined> {
     const symbolDoc = await workspace.openTextDocument(file);
@@ -93,15 +103,15 @@ async function getCodeAtRange(file: Uri, range: Range): Promise<string | undefin
     return text ?? undefined;
 }
 
-
 async function getLanguageForFile(file: Uri) {
     const document = await workspace.openTextDocument(file);
     return document.languageId;
 }
 
-
 async function tryGetCallLocation(file: Uri, frame: DebugProtocol.StackFrame, token: CancellationToken) {
-    if (token?.isCancellationRequested) { return undefined; }
+    if (token?.isCancellationRequested) {
+        return undefined;
+    }
     const zeroIndexedLine = frame.line - 1;
     const noFunctionLookupSize = 3;
     let symbolLocation: Range | undefined;
@@ -109,17 +119,18 @@ async function tryGetCallLocation(file: Uri, frame: DebugProtocol.StackFrame, to
     try {
         symbolLocation = await getFunctionLocation(file, frame.name, zeroIndexedLine);
     } catch (e) {
-        logWarn("Failed to get function location", e);
-        symbolLocation = new Range(Math.max(zeroIndexedLine - noFunctionLookupSize, 0), 0, zeroIndexedLine + noFunctionLookupSize, 99999);
+        logWarn('Failed to get function location', e);
+        symbolLocation = new Range(
+            Math.max(zeroIndexedLine - noFunctionLookupSize, 0),
+            0,
+            zeroIndexedLine + noFunctionLookupSize,
+            99999,
+        );
     }
 
     const code = await getCodeAtRange(file, symbolLocation);
 
-    const line = code
-        ? (symbolLocation
-            ? zeroIndexedLine - symbolLocation.start.line
-            : noFunctionLookupSize)
-        : 0;
+    const line = code ? (symbolLocation ? zeroIndexedLine - symbolLocation.start.line : noFunctionLookupSize) : 0;
 
     const language = await getLanguageForFile(file);
 
@@ -136,11 +147,14 @@ async function tryGetCallLocation(file: Uri, frame: DebugProtocol.StackFrame, to
         locationInCode: {
             startLine: line,
             startCharacter: 0,
-        }
+        },
     };
 }
 
-async function getCallLocation(frame: DebugProtocol.StackFrame, token: CancellationToken): Promise<CallLocation | undefined> {
+async function getCallLocation(
+    frame: DebugProtocol.StackFrame,
+    token: CancellationToken,
+): Promise<CallLocation | undefined> {
     if (!frame.source?.path) {
         logDebug(`getCallLocation: frame ${frame.id} has no source path`);
         return undefined;
@@ -172,9 +186,11 @@ async function getCallLocation(frame: DebugProtocol.StackFrame, token: Cancellat
         const allFiles = await withTimeout(
             Promise.resolve(workspace.findFiles('**/*', null, MAX_WORKSPACE_FILES)),
             FILE_SEARCH_TIMEOUT_MS,
-            'Workspace file search timed out'
+            'Workspace file search timed out',
         );
-        const filesWithSameName = allFiles.filter((file) => frame.source?.name && file.fsPath.endsWith(frame.source?.name));
+        const filesWithSameName = allFiles.filter(
+            (file) => frame.source?.name && file.fsPath.endsWith(frame.source?.name),
+        );
         logDebug(`getCallLocation frame ${frame.id}: found ${filesWithSameName.length} matching files in workspace`);
         if (filesWithSameName.length === 1) {
             const location = await tryGetCallLocation(filesWithSameName[0], frame, token);
@@ -196,7 +212,10 @@ export async function getStacktraceInfo(token?: CancellationToken): Promise<Stac
 
     logDebug('getStacktraceInfo: fetching stack frames');
     const fetchStart = Date.now();
-    const stackFrames = await callDebugFunction('stackTrace', { threadId: debug.activeStackItem?.threadId ?? 1, startFrame: 0 });
+    const stackFrames = await callDebugFunction('stackTrace', {
+        threadId: debug.activeStackItem?.threadId ?? 1,
+        startFrame: 0,
+    });
     logDebug(`getStacktraceInfo: got ${stackFrames.stackFrames.length} frames in ${Date.now() - fetchStart}ms`);
 
     // Process frames with concurrency limiting and timeout
@@ -210,13 +229,13 @@ export async function getStacktraceInfo(token?: CancellationToken): Promise<Stac
             return withTimeout(
                 getCallLocation(frame, token!),
                 FRAME_TIMEOUT_MS,
-                `Frame ${frame.id} processing timed out`
-            ).catch(e => {
+                `Frame ${frame.id} processing timed out`,
+            ).catch((e) => {
                 logWarn(`Failed to process frame ${frame.id}:`, e);
                 return undefined;
             });
         },
-        MAX_CONCURRENT_FRAMES
+        MAX_CONCURRENT_FRAMES,
     );
     logDebug(`getStacktraceInfo: processed ${callLocations.length} frames in ${Date.now() - processStart}ms`);
 

@@ -1,8 +1,7 @@
-import { CancellationTokenSource, commands, debug, ExtensionContext, WebviewPanel, window, workspace } from 'vscode';
+import { CancellationTokenSource, commands, debug, ExtensionContext, WebviewPanel, window } from 'vscode';
 import { ComlinkFrontendApi } from 'shared/src/index';
-import { getMonacoTheme } from './webview/themes';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
-import * as Comlink from "comlink/dist/esm/comlink";
+import * as Comlink from 'comlink/dist/esm/comlink';
 import { getComlinkChannel } from './webview/messaging';
 import { getStacktraceInfo } from './debug/callstack-extractor';
 import { FrontendApi } from './frontend-functions';
@@ -17,30 +16,19 @@ async function updateViewWithStackTrace() {
     try {
         if (!currentFrontendRpcChannel) {
             logError('No rpc channel found, cannot update view');
-            throw new Error("No rpc channel found");
+            throw new Error('No rpc channel found');
         }
         // Cancel any previous pending update
         currentCancellationSource?.cancel();
         currentCancellationSource = new CancellationTokenSource();
 
-        logDebug('Fetching stacktrace info and theme');
-        const [result, theme] = await Promise.all([
-            getStacktraceInfo(currentCancellationSource.token),
-            getMonacoTheme().catch(() => undefined),
-        ]);
+        logDebug('Fetching stacktrace info');
+        const result = await getStacktraceInfo(currentCancellationSource.token);
         logDebug(`Stacktrace info fetched, frames: ${result.length}`);
         logDebug('RPC call: setStackTrace to webview');
         const setStackStart = Date.now();
         await currentFrontendRpcChannel.setStackTrace(result);
         logDebug(`RPC call: setStackTrace completed in ${Date.now() - setStackStart}ms`);
-        if (theme) {
-            logDebug('RPC call: setTheme to webview');
-            const setThemeStart = Date.now();
-            await currentFrontendRpcChannel.setTheme(theme).catch(e =>
-                logError('Failed to set theme:', e)
-            );
-            logDebug(`RPC call: setTheme completed in ${Date.now() - setThemeStart}ms`);
-        }
         logDebug(`updateViewWithStackTrace completed in ${Date.now() - updateStart}ms`);
     } catch (e: unknown) {
         // Don't show error if it's a cancellation
@@ -49,13 +37,12 @@ async function updateViewWithStackTrace() {
             return;
         }
         logError('updateViewWithStackTrace failed:', e);
-        window.showErrorMessage("failed to load stacktrace, due to error, please try to open view again. Error: " + e);
+        window.showErrorMessage('failed to load stacktrace, due to error, please try to open view again. Error: ' + e);
     } finally {
         currentCancellationSource?.dispose();
         currentCancellationSource = undefined;
     }
 }
-
 
 export async function activate(context: ExtensionContext) {
     let currentPanel: WebviewPanel | undefined = undefined;
@@ -91,89 +78,82 @@ export async function activate(context: ExtensionContext) {
     // stopped/started/changed debug session
     context.subscriptions.push(debug.onDidChangeActiveDebugSession(updateView));
 
-    context.subscriptions.push(workspace.onDidChangeConfiguration(async event => {
-        if (event.affectsConfiguration('workbench.colorTheme')) {
+    context.subscriptions.push(
+        commands.registerCommand('call-graph.show-call-graph', async () => {
             try {
-                const theme = await getMonacoTheme();
-                await currentFrontendRpcChannel?.setTheme(theme);
-            } catch (e) {
-                logError('Failed to set theme:', e);
-            }
-        }
-    }));
-
-    context.subscriptions.push(commands.registerCommand('call-graph.show-call-graph', async () => {
-        try {
-            logInfo('Opening call graph panel');
-            if (!currentPanel?.webview) {
-                currentPanel = createWebview(context);
-                currentFrontendRpcChannel = undefined;
-                logDebug('Created new webview panel');
-            } else {
-                currentPanel.reveal();
-                logDebug('Revealed existing panel');
-            }
-
-            isInitializing = true;
-
-            // Set up Comlink channel FIRST, before any wait or debug events
-            const comlinkChannel = getComlinkChannel(currentPanel.webview, context);
-            Comlink.expose(FrontendApi, comlinkChannel);
-            logDebug('FrontendApi exposed via Comlink');
-
-            currentFrontendRpcChannel = Comlink.wrap<ComlinkFrontendApi>(comlinkChannel);
-            logDebug('Frontend RPC channel created');
-
-            // Clean up previous panel references
-            currentPanel.onDidDispose(() => {
-                logDebug('Webview panel disposed');
-                currentCancellationSource?.cancel();
-                currentCancellationSource?.dispose();
-                currentCancellationSource = undefined;
-                currentPanel = undefined;
-                currentFrontendRpcChannel = undefined;
-            });
-
-            // Set HTML and wait for webview to load
-            currentPanel.webview.html = getVueFrontendPanelContent(context, currentPanel);
-            logDebug('Waiting 1s for webview to load');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Handle any debug events that fired during initialization
-            isInitializing = false;
-            if (pendingUpdate) {
-                logDebug('Triggering deferred update from initialization period');
-                pendingUpdate = false;
-                updateView();
-            } else if (debug.activeDebugSession) {
-                logInfo('Active debug session found, loading stacktrace');
-                isUpdating = true;
-                try {
-                    await updateViewWithStackTrace();
-                } finally {
-                    isUpdating = false;
+                logInfo('Opening call graph panel');
+                if (!currentPanel?.webview) {
+                    currentPanel = createWebview(context);
+                    currentFrontendRpcChannel = undefined;
+                    logDebug('Created new webview panel');
+                } else {
+                    currentPanel.reveal();
+                    logDebug('Revealed existing panel');
                 }
-            } else {
-                logDebug('No active debug session, skipping stacktrace load');
+
+                isInitializing = true;
+
+                // Set up Comlink channel FIRST, before any wait or debug events
+                const comlinkChannel = getComlinkChannel(currentPanel.webview, context);
+                Comlink.expose(FrontendApi, comlinkChannel);
+                logDebug('FrontendApi exposed via Comlink');
+
+                currentFrontendRpcChannel = Comlink.wrap<ComlinkFrontendApi>(comlinkChannel);
+                logDebug('Frontend RPC channel created');
+
+                // Clean up previous panel references
+                currentPanel.onDidDispose(() => {
+                    logDebug('Webview panel disposed');
+                    currentCancellationSource?.cancel();
+                    currentCancellationSource?.dispose();
+                    currentCancellationSource = undefined;
+                    currentPanel = undefined;
+                    currentFrontendRpcChannel = undefined;
+                });
+
+                // Set HTML and wait for webview to load
+                currentPanel.webview.html = getVueFrontendPanelContent(context, currentPanel);
+                logDebug('Waiting 1s for webview to load');
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+
+                // Handle any debug events that fired during initialization
+                isInitializing = false;
+                if (pendingUpdate) {
+                    logDebug('Triggering deferred update from initialization period');
+                    pendingUpdate = false;
+                    updateView();
+                } else if (debug.activeDebugSession) {
+                    logInfo('Active debug session found, loading stacktrace');
+                    isUpdating = true;
+                    try {
+                        await updateViewWithStackTrace();
+                    } finally {
+                        isUpdating = false;
+                    }
+                } else {
+                    logDebug('No active debug session, skipping stacktrace load');
+                }
+            } catch (e: unknown) {
+                logError('Failed to create panel:', e);
+                window.showErrorMessage('failed to create panel: ' + e);
             }
-
-        } catch (e: unknown) {
-            logError('Failed to create panel:', e);
-            window.showErrorMessage("failed to create panel: " + e);
-        }
-    }));
-
+        }),
+    );
 
     // Command to show the debug output channel
-    context.subscriptions.push(commands.registerCommand('call-graph.show-output', () => {
-        showOutputChannel();
-    }));
+    context.subscriptions.push(
+        commands.registerCommand('call-graph.show-output', () => {
+            showOutputChannel();
+        }),
+    );
 
-    context.subscriptions.push(window.registerWebviewPanelSerializer('graph-visualization', {
-        deserializeWebviewPanel: async (webviewPanel: WebviewPanel, _state: unknown) => {
-            logInfo('Deserializing webview panel');
-            currentPanel = webviewPanel;
-            await commands.executeCommand('call-graph.show-call-graph');
-        }
-    }));
+    context.subscriptions.push(
+        window.registerWebviewPanelSerializer('graph-visualization', {
+            deserializeWebviewPanel: async (webviewPanel: WebviewPanel, _state: unknown) => {
+                logInfo('Deserializing webview panel');
+                currentPanel = webviewPanel;
+                await commands.executeCommand('call-graph.show-call-graph');
+            },
+        }),
+    );
 }

@@ -1,11 +1,15 @@
-import { CancellationToken, Uri, Position, debug, workspace } from "vscode";
-import { ValueLookupResult } from "shared/src";
-import { callDebugFunction, getVariablesRecursive } from "./typed-debug";
-import { logDebug, logWarn } from "../log";
+import { CancellationToken, Uri, Position, debug, workspace } from 'vscode';
+import { ValueLookupResult } from 'shared/src';
+import { callDebugFunction, getVariablesRecursive } from './typed-debug';
+import { logDebug, logWarn } from '../log';
 
-// todo use this: https://github.com/microsoft/vscode/blob/bdde2df59d5ab67254d6489227dafc3b472ad055/src/vs/workbench/contrib/debug/common/debugUtils.ts#L124
-
-export async function getValueWithEvalMethod(uri: Uri, line: number, column: number, frameId: number, token?: CancellationToken): Promise<ValueLookupResult> {
+export async function getValueWithEvalMethod(
+    uri: Uri,
+    line: number,
+    column: number,
+    frameId: number,
+    token?: CancellationToken,
+): Promise<ValueLookupResult> {
     // Check cancellation
     if (token?.isCancellationRequested) {
         logDebug('getValueWithEvalMethod: cancelled (entry)');
@@ -34,31 +38,33 @@ export async function getValueWithEvalMethod(uri: Uri, line: number, column: num
     const text = document.lineAt(line).text;
 
     let start = range.start.character;
-    while (start > 0 && /\w|\.|\[|\]|\'\"'/.test(text[start - 1])) {
+    while (start > 0 && /[\[\]\w.\'"]/.test(text[start - 1])) {
         start--;
     }
 
     let end = range.end.character;
-    while (end < text.length && /\w\'\"'/.test(text[end])) {
+    while (end < text.length && /[\w\'"]/.test(text[end])) {
         end++;
     }
 
     const expression = text.slice(start, end);
     logDebug(`getValueWithEvalMethod: evaluating expression "${expression}"`);
     const result = await callDebugFunction('evaluate', { expression, frameId, context: 'hover' });
-    logDebug(`getValueWithEvalMethod: evaluate result = "${result.result}" (varsRef=${result.variablesReference}) in ${Date.now() - startTime}ms`);
+    logDebug(
+        `getValueWithEvalMethod: evaluate result = "${result.result}" (varsRef=${result.variablesReference}) in ${Date.now() - startTime}ms`,
+    );
 
     if (result.variablesReference) {
         return {
-            provider: "eval",
+            provider: 'eval',
             formattedValue: result.result,
-            variableInfo: await getVariablesRecursive(result.variablesReference, 5, token)
+            variableInfo: await getVariablesRecursive(result.variablesReference, 5, token),
         };
     }
 
     return {
-        provider: "eval",
+        provider: 'eval',
         formattedValue: result.result,
-        variableInfo: [{ name: variableName, value: result.result, type: result.type }]
+        variableInfo: [{ name: variableName, value: result.result, type: result.type }],
     };
 }

@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import type { CallLocation, MonacoTheme } from 'shared/src';
+import type { CallLocation } from 'shared/src';
 import StacktraceHeader from './components/StacktraceHeader.vue';
 import StacktraceMonacoEditor from './components/StacktraceMonacoEditor.vue';
 
 defineProps<{
     traceFrame: CallLocation,
-    theme?: MonacoTheme,
-    denseCodeMode?: boolean
+    displayMode?: 'default' | 'executed' | 'fullScope'
 }>();
 
 const emit = defineEmits<{
@@ -27,8 +26,7 @@ function handleSetStackFrameId(frameId: number) {
     <vscode-panel-view class="frame-container">
         <StacktraceHeader :trace-frame="traceFrame" @open-file="handleOpenFile"
             @set-stack-frame-id="handleSetStackFrameId" />
-        <StacktraceMonacoEditor style="grid-area: code;" :trace-frame="traceFrame" :theme="theme"
-            :dense-code-mode="denseCodeMode" />
+        <StacktraceMonacoEditor style="grid-area: code;" :trace-frame="traceFrame" :display-mode="displayMode" />
     </vscode-panel-view>
 </template>
 

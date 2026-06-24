@@ -1,7 +1,7 @@
-import { CancellationToken, debug } from "vscode";
-import type { DebugProtocol } from "@vscode/debugprotocol";
-import { VariableInfo } from "shared/src";
-import { logDebug, logError } from "../log";
+import { CancellationToken, debug } from 'vscode';
+import type { DebugProtocol } from '@vscode/debugprotocol';
+import { VariableInfo } from 'shared/src';
+import { logDebug, logError } from '../log';
 
 // Timeout for debug adapter requests (ms)
 const DEBUG_REQUEST_TIMEOUT_MS = 3000;
@@ -13,7 +13,11 @@ const MAX_RECURSION_DEPTH = 3;
 /**
  * Wrap a debug request with a timeout
  */
-async function callDebugFunctionWithTimeout<T, R>(endpoint: string, param: T, timeoutMs: number = DEBUG_REQUEST_TIMEOUT_MS): Promise<R> {
+async function callDebugFunctionWithTimeout<T, R>(
+    endpoint: string,
+    param: T,
+    timeoutMs: number = DEBUG_REQUEST_TIMEOUT_MS,
+): Promise<R> {
     const debugSession = debug.activeDebugSession;
     if (!debugSession) {
         throw new Error('No active debug session');
@@ -43,10 +47,22 @@ async function callDebugFunctionWithTimeout<T, R>(endpoint: string, param: T, ti
     });
 }
 
-export async function callDebugFunction(endpoint: 'stackTrace', param: DebugProtocol.StackTraceArguments): Promise<DebugProtocol.StackTraceResponse['body']>;
-export async function callDebugFunction(endpoint: 'scopes', param: DebugProtocol.ScopesArguments): Promise<DebugProtocol.ScopesResponse['body']>;
-export async function callDebugFunction(endpoint: 'evaluate', param: DebugProtocol.EvaluateArguments): Promise<DebugProtocol.EvaluateResponse['body']>;
-export async function callDebugFunction(endpoint: 'variables', param: DebugProtocol.VariablesArguments): Promise<DebugProtocol.VariablesResponse['body']>;
+export async function callDebugFunction(
+    endpoint: 'stackTrace',
+    param: DebugProtocol.StackTraceArguments,
+): Promise<DebugProtocol.StackTraceResponse['body']>;
+export async function callDebugFunction(
+    endpoint: 'scopes',
+    param: DebugProtocol.ScopesArguments,
+): Promise<DebugProtocol.ScopesResponse['body']>;
+export async function callDebugFunction(
+    endpoint: 'evaluate',
+    param: DebugProtocol.EvaluateArguments,
+): Promise<DebugProtocol.EvaluateResponse['body']>;
+export async function callDebugFunction(
+    endpoint: 'variables',
+    param: DebugProtocol.VariablesArguments,
+): Promise<DebugProtocol.VariablesResponse['body']>;
 export async function callDebugFunction<T, R>(endpoint: string, param: T) {
     return callDebugFunctionWithTimeout<T, R>(endpoint, param);
 }
@@ -54,7 +70,8 @@ export async function callDebugFunction<T, R>(endpoint: string, param: T) {
 export async function getVariablesRecursive(
     variableRef: number,
     maxRecursion = MAX_RECURSION_DEPTH,
-    token?: CancellationToken
+    token?: CancellationToken,
+    seenRefs?: Set<number>,
 ): Promise<VariableInfo[]> {
     // Guard against cancellation
     if (token?.isCancellationRequested) {
@@ -66,16 +83,29 @@ export async function getVariablesRecursive(
         return [];
     }
 
-    logDebug(`getVariablesRecursive: ref=${variableRef}, depth=${MAX_RECURSION_DEPTH - maxRecursion + 1}/${MAX_RECURSION_DEPTH}`);
+    // Guard against DAP adapters that return circular variable references.
+    if (seenRefs?.has(variableRef)) {
+        logDebug(`getVariablesRecursive: ref=${variableRef} already visited, skipping cycle`);
+        return [];
+    }
+    seenRefs ??= new Set<number>();
+    seenRefs.add(variableRef);
+
+    logDebug(
+        `getVariablesRecursive: ref=${variableRef}, depth=${MAX_RECURSION_DEPTH - maxRecursion + 1}/${MAX_RECURSION_DEPTH}`,
+    );
     const fetchStart = Date.now();
 
     try {
-        const variablesResponse: any = await callDebugFunctionWithTimeout('variables', { variablesReference: variableRef })
-            .catch(() => ({ variables: [] }));
+        const variablesResponse: any = await callDebugFunctionWithTimeout('variables', {
+            variablesReference: variableRef,
+        }).catch(() => ({ variables: [] }));
 
         // Limit variables to prevent memory explosion
         const limitedVariables = variablesResponse.variables.slice(0, MAX_VARIABLES_PER_LEVEL);
-        logDebug(`getVariablesRecursive: ref=${variableRef} got ${limitedVariables.length} variables in ${Date.now() - fetchStart}ms`);
+        logDebug(
+            `getVariablesRecursive: ref=${variableRef} got ${limitedVariables.length} variables in ${Date.now() - fetchStart}ms`,
+        );
 
         // Process variables with concurrency limit
         const results: VariableInfo[] = [];
@@ -90,24 +120,33 @@ export async function getVariablesRecursive(
                 break;
             }
 
-            const batchResults = await Promise.all(batch.map(async (variable: any) => {
+            const batchResults = await Promise.all(
+                batch.map(async (variable: any) => {
+                    const subVariables =
+                        variable.variablesReference > 0
+                            ? await getVariablesRecursive(
+                                  variable.variablesReference,
+                                  maxRecursion - 1,
+                                  token,
+                                  seenRefs,
+                              ).catch(() => [])
+                            : [];
 
-                const subVariables = variable.variablesReference > 0
-                    ? await getVariablesRecursive(variable.variablesReference, maxRecursion - 1, token).catch(() => [])
-                    : [];
-
-                return {
-                    name: variable.name,
-                    value: variable.value,
-                    type: variable.type,
-                    subVariables
-                } as VariableInfo;
-            }));
+                    return {
+                        name: variable.name,
+                        value: variable.value,
+                        type: variable.type,
+                        subVariables,
+                    } as VariableInfo;
+                }),
+            );
 
             results.push(...batchResults);
         }
 
-        logDebug(`getVariablesRecursive: ref=${variableRef} returning ${results.length} vars in ${Date.now() - fetchStart}ms`);
+        logDebug(
+            `getVariablesRecursive: ref=${variableRef} returning ${results.length} vars in ${Date.now() - fetchStart}ms`,
+        );
         return results;
     } catch (e) {
         logError('Failed to fetch variables recursively:', e);
