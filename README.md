@@ -16,23 +16,25 @@ A Visual Studio Code extension that visualizes the function calls (code paths) l
 
 Debug Graph includes a built-in **MCP (Model Context Protocol) server**. It lets AI agents use the VS Code debugger directly.
 
-The MCP server exposes **18 tools** that let an agent interact with the VS Code debugger directly:
+The MCP server exposes **20 tools** that let an agent interact with the VS Code debugger directly:
 
 | Tool | What it does |
 |---|---|
 | `list_debug_configs` | Reads `.vscode/launch.json` and returns available debug configurations. |
-| `list_breakpoints` | Shows existing breakpoints. |
-| `set_breakpoint` | Adds a breakpoint and returns its id. |
+| `list_breakpoints` | Shows existing breakpoints (source and function). |
+| `set_breakpoint` | Adds a breakpoint by file+line or function name, returns its id. |
 | `remove_breakpoint` | Removes a breakpoint by id. |
-| `start_debug` | Starts debugging. Supports `configName`, or `type` + `name` + `request`, plus `program`, `args`, `env`, and `cwd`. Returns `{id, name, type}`. |
+| `start_debug` | Starts debugging. Supports `configName`, or `type` + `name` + `request`, plus `program`, `args`, `env`, `cwd`, `runtimeExecutable`, `runtimeArgs`, `console`, `stopOnEntry`. Returns `{id, name, type, configuration}`. |
 | `stop_debug` | Stops the current debug session. |
+| `disconnect` | Disconnects without killing the debugged program. |
 | `restart` | Stops and restarts a debug session with a `configName`. |
-| `get_active_session` | Shows the current debug session, or `null`. |
+| `get_active_session` | Shows the current debug session (includes `configuration`), or `null`. |
 | `wait_for_breakpoint_hit` | Waits until the program pauses after start, resume, or step. |
 | `list_threads` | Lists all threads in the debugged program. |
 | `get_stack_trace` | Shows the paused call stack (optionally for a specific thread). |
-| `get_variables` | Shows variables from all scopes in the current frame. |
-| `evaluate` | Runs an expression in the paused program (⚠️ executes in the real program — avoid side effects). |
+| `get_variables` | Shows variables from all scopes. Pass a `frameId` for any frame, or omit for the active frame. |
+| `get_source` | Reads source code from a file (whole file or line range). |
+| `evaluate` | Runs an expression in the paused program. Pass a `frameId` to evaluate in a specific frame. ⚠️ executes in the real program — avoid side effects. |
 | `step_over` | Runs the next line without entering functions. |
 | `step_into` | Enters the called function. |
 | `step_out` | Leaves the current function. |
@@ -56,7 +58,11 @@ The MCP server publishes a **`debug_session_workflow` prompt**. Agents should ca
 
 Use this when you want an agent to find real runtime values instead of guessing from static code.
 
-> **Typed outputs** — The 8 inspection tools (`get_active_session`, `list_debug_configs`, `get_stack_trace`, `list_threads`, `get_variables`, `list_breakpoints`, `wait_for_breakpoint_hit`, `set_breakpoint`) publish `outputSchema` (JSON Schema) so AI clients know the exact return shape before calling the tool.
+> **Typed outputs** — 10 tools (`get_active_session`, `list_debug_configs`, `get_stack_trace`, `list_threads`, `get_variables`, `list_breakpoints`, `wait_for_breakpoint_hit`, `set_breakpoint`, `evaluate`, `get_source`) publish `outputSchema` (JSON Schema) so AI clients know the exact return shape before calling the tool.
+
+### ⚙️ MCP Settings
+
+The MCP server is enabled by default. To disable it, set `"debug-graph.mcp.enabled": false` in your VS Code settings. Changes take effect after restarting VS Code or running the **`Debug: Restart MCP Server`** command (`call-graph.restart-mcp`).
 
 ## 🚀 Requirements
 

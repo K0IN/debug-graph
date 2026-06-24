@@ -63,6 +63,7 @@ export async function callDebugFunction(
     endpoint: 'variables',
     param: DebugProtocol.VariablesArguments,
 ): Promise<DebugProtocol.VariablesResponse['body']>;
+export async function callDebugFunction(endpoint: 'threads', param: {}): Promise<DebugProtocol.ThreadsResponse['body']>;
 export async function callDebugFunction<T, R>(endpoint: string, param: T) {
     return callDebugFunctionWithTimeout<T, R>(endpoint, param);
 }

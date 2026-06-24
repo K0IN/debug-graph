@@ -10,7 +10,8 @@ import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { Server } from 'http';
 import { z } from 'zod';
-import { debug, commands, workspace, SourceBreakpoint, Location, Range, Uri } from 'vscode';
+import { debug, commands, workspace, SourceBreakpoint, FunctionBreakpoint, Location, Range, Uri } from 'vscode';
+import { logInfo } from '../log';
 import { callDebugFunction } from '../inspect/typed-debug';
 import type { DebugProtocol } from '@vscode/debugprotocol';
 
@@ -18,7 +19,11 @@ export function handleStreamableHttp(server: Server): void {
     const mcpServer = createMcpServer();
 
     server.on('request', async (req: IncomingMessage, res: ServerResponse) => {
-        if (req.method !== 'POST' || req.url !== '/mcp') {
+        if (req.url === '/mcp' && req.method !== 'POST') {
+            res.writeHead(405, { Allow: 'POST' }).end();
+            return;
+        }
+        if (req.url !== '/mcp') {
             res.writeHead(404).end();
             return;
         }
@@ -48,6 +53,8 @@ function createMcpServer(): McpServer {
         content: [{ type: 'text' as const, text: `Error: ${e}` }],
         isError: true as const,
     });
+    const RESTART_TIMEOUT_MS = 5000;
+    const WAIT_BREAKPOINT_TIMEOUT_MS = 30000;
     const json = (data: unknown) => {
         const base: { content: { type: 'text'; text: string }[]; structuredContent?: Record<string, unknown> } = {
             content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -63,13 +70,15 @@ function createMcpServer(): McpServer {
         {
             title: 'Get Active Debug Session',
             annotations: { readOnlyHint: true },
-            description: 'Show the current debug session. Returns {id, name, type} or null if none is running.',
+            description:
+                'Show the current debug session. Returns {id, name, type, configuration} or null if none is running.',
             outputSchema: z
                 .object({
                     id: z.string(),
                     name: z.string(),
                     type: z.string(),
                 })
+                .passthrough()
                 .nullable(),
         },
         async () => {
@@ -77,7 +86,12 @@ function createMcpServer(): McpServer {
             if (!session) {
                 return json(null);
             }
-            return json({ id: session.id, name: session.name, type: session.type });
+            return json({
+                id: session.id,
+                name: session.name,
+                type: session.type,
+                configuration: session.configuration,
+            });
         },
     );
 
@@ -200,9 +214,7 @@ function createMcpServer(): McpServer {
                 return fail('No active debug session');
             }
             try {
-                return json(
-                    await (callDebugFunction as (cmd: string, args: object) => Promise<unknown>)('threads', {}),
-                );
+                return json(await callDebugFunction('threads', {}));
             } catch (e) {
                 return fail(`Failed to list threads: ${e}. Some debug adapters may not support this.`);
             }
@@ -215,7 +227,10 @@ function createMcpServer(): McpServer {
             title: 'Get Variables',
             annotations: { readOnlyHint: true },
             description:
-                'Show variables from ALL scopes (Local, Global, Closure) in the current stack frame. Returns [{scope, name, value, type}].',
+                'Show variables from ALL scopes (Local, Global, Closure). Pass a frameId from get_stack_trace, or omit for the active frame. Returns [{scope, name, value, type}].',
+            inputSchema: z.object({
+                frameId: z.number().optional().describe('Frame ID from get_stack_trace. Omit for the active frame.'),
+            }),
             outputSchema: z.array(
                 z.object({
                     scope: z.string(),
@@ -225,17 +240,18 @@ function createMcpServer(): McpServer {
                 }),
             ),
         },
-        async () => {
+        async (args) => {
             try {
                 const stackItem = debug.activeStackItem;
                 if (!stackItem) {
                     return fail('No active stack item');
                 }
                 const stackFrame = stackItem as { frameId?: number };
-                if (stackFrame.frameId === undefined) {
+                const frameId = args.frameId ?? stackFrame.frameId;
+                if (frameId === undefined) {
                     return fail('No frame ID available');
                 }
-                const scopesResponse = await callDebugFunction('scopes', { frameId: stackFrame.frameId });
+                const scopesResponse = await callDebugFunction('scopes', { frameId: frameId });
                 if (scopesResponse.scopes.length === 0) {
                     return json([]);
                 }
@@ -266,13 +282,14 @@ function createMcpServer(): McpServer {
             title: 'List Breakpoints',
             annotations: { readOnlyHint: true },
             description:
-                'List all breakpoints that are already set. Returns [{id, enabled, file?, line?, condition?, hitCondition?, logMessage?}].',
+                'List all breakpoints that are already set. Returns [{id, enabled, file?, line?, functionName?, condition?, hitCondition?, logMessage?}].',
             outputSchema: z.array(
                 z.object({
                     id: z.string(),
                     enabled: z.boolean(),
                     file: z.string().optional(),
                     line: z.number().optional(),
+                    functionName: z.string().optional(),
                     condition: z.string().optional(),
                     hitCondition: z.string().optional(),
                     logMessage: z.string().optional(),
@@ -294,6 +311,12 @@ function createMcpServer(): McpServer {
                             ...base,
                             file: bp.location.uri.fsPath,
                             line: bp.location.range.start.line + 1,
+                        };
+                    }
+                    if (bp instanceof FunctionBreakpoint) {
+                        return {
+                            ...base,
+                            functionName: bp.functionName,
                         };
                     }
                     return base;
@@ -318,6 +341,12 @@ function createMcpServer(): McpServer {
                     .describe(
                         'Expression to evaluate in the paused context, e.g. "myVar" or "myVar.length > 0". Avoid mutations like "x++" or calling functions with side effects.',
                     ),
+                frameId: z
+                    .number()
+                    .optional()
+                    .describe(
+                        "Frame ID from get_stack_trace. Evaluate in this frame's context. Omit for the active frame.",
+                    ),
             }),
             outputSchema: z.string(),
         },
@@ -331,6 +360,9 @@ function createMcpServer(): McpServer {
                     expression: args.expression,
                     context: 'repl',
                 };
+                if (args.frameId !== undefined) {
+                    evaluateArgs.frameId = args.frameId;
+                }
                 const response = await callDebugFunction('evaluate', evaluateArgs);
                 return json(response.result);
             } catch (e) {
@@ -345,7 +377,7 @@ function createMcpServer(): McpServer {
             title: 'Start Debug Session',
             annotations: { destructiveHint: true },
             description:
-                'Start debugging. Use a configName from list_debug_configs, or build one with type + name + request + program. Returns {id, name, type} on success. Check get_active_session first to avoid duplicate sessions.',
+                'Start debugging. Use a configName from list_debug_configs, or build one with type + name + request + program. Returns {id, name, type, configuration} on success. Check get_active_session first to avoid duplicate sessions.',
             inputSchema: z.object({
                 configName: z.string().optional().describe('Name of the launch.json debug config to run.'),
                 type: z.string().optional().describe('Debugger type, such as "node", "python", or "go".'),
@@ -355,6 +387,13 @@ function createMcpServer(): McpServer {
                 args: z.array(z.string()).optional().describe('Command-line arguments passed to the program'),
                 env: z.record(z.string(), z.string()).optional().describe('Environment variables for the program'),
                 cwd: z.string().optional().describe('Working directory for the program'),
+                runtimeExecutable: z.string().optional().describe('Runtime executable path (e.g. node, python).'),
+                runtimeArgs: z.array(z.string()).optional().describe('Arguments for the runtime executable.'),
+                console: z
+                    .string()
+                    .optional()
+                    .describe('Console type, e.g. "internalConsole" or "integratedTerminal".'),
+                stopOnEntry: z.boolean().optional().describe('Stop at the program entry point.'),
             }),
             outputSchema: z.object({
                 id: z.string(),
@@ -380,6 +419,18 @@ function createMcpServer(): McpServer {
                     }
                     if (args.cwd) {
                         config.cwd = args.cwd;
+                    }
+                    if (args.runtimeExecutable) {
+                        config.runtimeExecutable = args.runtimeExecutable;
+                    }
+                    if (args.runtimeArgs) {
+                        config.runtimeArgs = args.runtimeArgs;
+                    }
+                    if (args.console) {
+                        config.console = args.console;
+                    }
+                    if (args.stopOnEntry !== undefined) {
+                        config.stopOnEntry = args.stopOnEntry;
                     }
                 } else {
                     return fail('Provide configName, or type+name+request');
@@ -427,7 +478,7 @@ function createMcpServer(): McpServer {
                     const t = setTimeout(() => {
                         sub.dispose();
                         resolve(false);
-                    }, 5000);
+                    }, RESTART_TIMEOUT_MS);
                     const sub = debug.onDidTerminateDebugSession((s) => {
                         if (s.id === oldSession.id) {
                             clearTimeout(t);
@@ -448,6 +499,58 @@ function createMcpServer(): McpServer {
                 }
                 const session = debug.activeDebugSession!;
                 return json({ id: session.id, name: session.name, type: session.type });
+            } catch (e) {
+                return fail(e);
+            }
+        },
+    );
+
+    server.registerTool(
+        'disconnect',
+        {
+            title: 'Disconnect',
+            annotations: { destructiveHint: true },
+            description:
+                'Disconnect from the debug session without terminating the debugged program. Use instead of stop_debug when you want the program to keep running.',
+        },
+        async () => {
+            try {
+                await commands.executeCommand('workbench.action.debug.disconnect');
+                return ok('Disconnected');
+            } catch (e) {
+                return fail(e);
+            }
+        },
+    );
+
+    server.registerTool(
+        'get_source',
+        {
+            title: 'Get Source Code',
+            annotations: { readOnlyHint: true },
+            description:
+                'Read source code from a file in the workspace. Pass a file path (absolute) and optionally a line range. Returns the file content as text.',
+            inputSchema: z.object({
+                file: z.string().describe('Absolute path to the source file.'),
+                startLine: z
+                    .number()
+                    .optional()
+                    .describe('1-based start line (inclusive). Omit to read the whole file.'),
+                endLine: z.number().optional().describe('1-based end line (inclusive). Omit to read to end.'),
+            }),
+            outputSchema: z.string(),
+        },
+        async (args) => {
+            try {
+                const uri = Uri.file(args.file);
+                const content = new TextDecoder().decode(await workspace.fs.readFile(uri));
+                if (args.startLine !== undefined) {
+                    const lines = content.split('\n');
+                    const start = Math.max(0, args.startLine - 1);
+                    const end = args.endLine !== undefined ? Math.min(lines.length, args.endLine) : lines.length;
+                    return json(lines.slice(start, end).join('\n'));
+                }
+                return json(content);
             } catch (e) {
                 return fail(e);
             }
@@ -489,7 +592,7 @@ function createMcpServer(): McpServer {
             }),
         },
         async (args) => {
-            const timeoutMs = args.timeout ?? 30000;
+            const timeoutMs = args.timeout ?? WAIT_BREAKPOINT_TIMEOUT_MS;
             const session = debug.activeDebugSession;
             if (!session) {
                 return fail('No active debug session — start a debug session first');
@@ -551,22 +654,41 @@ function createMcpServer(): McpServer {
             title: 'Set Breakpoint',
             annotations: { destructiveHint: true },
             description:
-                'Set a breakpoint at a file and line number. Returns {id, file, line}. Use the id to remove_breakpoint later.',
+                'Set a breakpoint at a file and line, or on a function name. Returns {id, file?, line?, functionName?}. Use the id to remove_breakpoint later.',
             inputSchema: z.object({
-                file: z.string().describe('Absolute path to the source file'),
-                line: z.number().describe('1-based line number'),
+                file: z
+                    .string()
+                    .optional()
+                    .describe('Absolute path to the source file. Required unless functionName is set.'),
+                line: z.number().optional().describe('1-based line number. Required unless functionName is set.'),
+                functionName: z.string().optional().describe('Function name to break on. Alternative to file + line.'),
                 condition: z.string().optional().describe('Only stop when this expression is true.'),
                 hitCondition: z.string().optional().describe('Only stop after this many hits, such as "5".'),
                 logMessage: z.string().optional().describe('Log this message instead of stopping.'),
             }),
             outputSchema: z.object({
                 id: z.string(),
-                file: z.string(),
-                line: z.number(),
+                file: z.string().optional(),
+                line: z.number().optional(),
+                functionName: z.string().optional(),
             }),
         },
         async (args) => {
             try {
+                if (args.functionName) {
+                    const bp = new FunctionBreakpoint(
+                        args.functionName,
+                        true,
+                        args.condition,
+                        args.hitCondition,
+                        args.logMessage,
+                    );
+                    debug.addBreakpoints([bp]);
+                    return json({ id: bp.id, functionName: args.functionName });
+                }
+                if (!args.file || args.line === undefined) {
+                    return fail('Provide file+line, or functionName');
+                }
                 const uri = Uri.file(args.file);
                 const bp = new SourceBreakpoint(
                     new Location(uri, new Range(args.line - 1, 0, args.line - 1, 0)),
