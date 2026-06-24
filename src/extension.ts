@@ -1,4 +1,16 @@
-import { CancellationTokenSource, commands, debug, ExtensionContext, WebviewPanel, window } from 'vscode';
+import {
+    CancellationToken,
+    CancellationTokenSource,
+    commands,
+    debug,
+    ExtensionContext,
+    lm,
+    McpStdioServerDefinition,
+    Uri,
+    WebviewPanel,
+    window,
+    workspace,
+} from 'vscode';
 import { ComlinkFrontendApi } from 'shared/src/index';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
 import * as Comlink from 'comlink/dist/esm/comlink';
@@ -6,6 +18,7 @@ import { getComlinkChannel } from './webview/messaging';
 import { getStacktraceInfo } from './debug/callstack-extractor';
 import { FrontendApi } from './frontend-functions';
 import { logInfo, logError, logDebug, showOutputChannel } from './log';
+import { DebugBridge } from './mcp/debug-bridge';
 
 let currentFrontendRpcChannel: Comlink.Remote<ComlinkFrontendApi> | undefined = undefined;
 let currentCancellationSource: CancellationTokenSource | undefined = undefined;
@@ -49,6 +62,45 @@ export async function activate(context: ExtensionContext) {
     let isUpdating = false;
     let isInitializing = false;
     let pendingUpdate = false;
+
+    // ── MCP Debug Bridge ──────────────────────────────────────────────
+    const debugBridge = new DebugBridge();
+    await debugBridge.start();
+    context.subscriptions.push({ dispose: () => debugBridge.dispose() });
+    logInfo(`DebugBridge started on port ${debugBridge.port}`);
+
+    // ── MCP Server Definition Provider ────────────────────────────────
+    const MCP_PROVIDER_ID = 'debugGraph.mcpProvider';
+
+    context.subscriptions.push(
+        lm.registerMcpServerDefinitionProvider(MCP_PROVIDER_ID, {
+            provideMcpServerDefinitions: async (_token: CancellationToken) => {
+                const serverPath = process.env['VSCODE_MCP_SERVER_PATH']
+                    ? Uri.file(process.env['VSCODE_MCP_SERVER_PATH'])
+                    : Uri.joinPath(context.extensionUri, 'dist', 'mcp-server.mjs');
+
+                return [
+                    new McpStdioServerDefinition(
+                        'Debug Graph MCP',
+                        process.execPath,
+                        [serverPath.fsPath],
+                        {
+                            DEBUG_BRIDGE_PORT: String(debugBridge.port),
+                            ELECTRON_RUN_AS_NODE: '1',
+                        },
+                        context.extension.packageJSON.version,
+                    ),
+                ];
+            },
+
+            resolveMcpServerDefinition: async (server: McpStdioServerDefinition, _token: CancellationToken) => {
+                // The server is already fully configured — just return it.
+                // If you needed to prompt for credentials or config, do it here.
+                return server;
+            },
+        })
+    );
+    logInfo('MCP server definition provider registered');
 
     // started debug session
     const updateView = () => {

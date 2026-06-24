@@ -28,6 +28,12 @@
     ],
     "main": "./dist/extension.js",
     "contributes": {
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "debugGraph.mcpProvider",
+                "label": "Debug Graph MCP Server"
+            }
+        ],
         "commands": [
             {
                 "command": "call-graph.show-call-graph",
@@ -57,7 +63,7 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run vscode:package",
-        "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map",
+        "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map && npm run compile:mcp",
         "vscode:bundle": "npm run vscode:package && vsce package",
         "vscode:install": "npm run vscode:bundle && code --install-extension call-graph-0.0.1.vsix",
         "vscode:uninstall": "code --uninstall k0in.call-graph",
@@ -66,7 +72,8 @@
         "compile-frontend": "cd frontend && npm run build",
         "watch-frontend": "cd frontend && npm run watch",
         "lint": "eslint . --ext ts",
-        "compile": "webpack",
+        "compile": "webpack && npm run compile:mcp",
+        "compile:mcp": "tsc -p tsconfig.mcp.json",
         "watch": "npm run compile-frontend && webpack --watch",
         "lint-all": "npm run lint && npm run lint-frontend",
         "compile-all": "npm run compile && npm run compile-frontend",
@@ -97,12 +104,13 @@
         "webpack-cli": "^5.1.4"
     },
     "dependencies": {
+        "@cfworker/json-schema": "^4.1.1",
         "@modelcontextprotocol/client": "^2.0.0-alpha.2",
         "@modelcontextprotocol/server": "^2.0.0-alpha.2",
         "@vscode/debugprotocol": "^1.66.0",
         "comlink": "^4.4.1",
         "shared": "file:shared",
-        "zod": "^3.25.0-beta.20250519T094321"
+        "zod": "^4.4.3"
     },
     "bugs": {
         "url": "https://github.com/K0IN/stacktrace-history/issues"
