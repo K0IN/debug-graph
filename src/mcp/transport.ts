@@ -10,7 +10,9 @@ export function comlinkEndpointFromSocket(socket: net.Socket) {
         buffer = lines.pop() ?? '';
         for (const line of lines) {
             const trimmed = line.trim();
-            if (!trimmed) continue;
+            if (!trimmed) {
+                continue;
+            }
             try {
                 const msg = JSON.parse(trimmed);
                 for (const listener of listeners) {
