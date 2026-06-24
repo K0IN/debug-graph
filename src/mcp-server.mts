@@ -9,105 +9,18 @@
  *            All diagnostic logs go to **stderr**.
  */
 
-import { McpServer } from "@modelcontextprotocol/server";
-import { StdioServerTransport } from "@modelcontextprotocol/server";
+import { McpServer } from '@modelcontextprotocol/server';
+import { StdioServerTransport } from '@modelcontextprotocol/server';
 import * as net from 'net';
 import { wrap } from 'comlink';
 import { z } from 'zod';
+import { comlinkEndpointFromSocket } from './mcp/transport.js';
+import type { DebugApi } from './mcp/debug-api.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function logStderr(...args: unknown[]): void {
     process.stderr.write(`[debug-graph-mcp] ${args.map((a) => String(a)).join(' ')}\n`);
-}
-
-// ── Comlink transport adapter ─────────────────────────────────────────
-// Mirrors the server-side `comlinkEndpointFromSocket` in debug-bridge.ts.
-
-function comlinkEndpointFromSocket(socket: net.Socket) {
-    const listeners = new Set<EventListenerOrEventListenerObject>();
-    let buffer = '';
-
-    socket.on('data', (chunk: Buffer) => {
-        buffer += chunk.toString('utf-8');
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) {
-                continue;
-            }
-            try {
-                const msg = JSON.parse(trimmed);
-                listeners.forEach((listener) => {
-                    const data = { data: msg };
-                    if ('handleEvent' in listener) {
-                        listener.handleEvent(data as unknown as Event);
-                    } else {
-                        (listener as (evt: Event) => void)(data as unknown as Event);
-                    }
-                });
-            } catch {
-                // skip
-            }
-        }
-    });
-
-    socket.on('close', () => listeners.clear());
-    socket.on('error', () => listeners.clear());
-
-    return {
-        postMessage(msg: unknown, _transfer?: unknown[]) {
-            socket.write(JSON.stringify(msg) + '\n');
-        },
-        addEventListener(_type: string, listener: EventListenerOrEventListenerObject, _options?: {}): void {
-            listeners.add(listener);
-        },
-        removeEventListener(_type: string, listener: EventListenerOrEventListenerObject, _options?: {}): void {
-            listeners.delete(listener);
-        },
-        start() {
-            // socket is already open
-        },
-    };
-}
-
-// ── Debug API type (matches DebugApi in debug-bridge.ts) ──────────────
-
-interface StackFrameInfo {
-    id: number;
-    name: string;
-    source?: { name?: string; path?: string };
-    line: number;
-    column: number;
-}
-
-interface StackTraceResult {
-    stackFrames: StackFrameInfo[];
-    totalFrames?: number;
-}
-
-interface BreakpointInfo {
-    id: string;
-    enabled: boolean;
-    condition?: string;
-    hitCondition?: string;
-    logMessage?: string;
-}
-
-interface DebugApi {
-    getActiveSession(): Promise<{ id: string; name: string; type: string } | null>;
-    getStackTraces(): Promise<StackTraceResult>;
-    getVariables(params: { frameId?: number }): Promise<unknown>;
-    evaluate(params: { expression: string; frameId?: number }): Promise<string>;
-    getBreakpoints(): Promise<BreakpointInfo[]>;
-    startDebug(params: { configName?: string; type?: string; name?: string; request?: string; program?: string }): Promise<string>;
-    setBreakpoint(params: { file: string; line: number; condition?: string; hitCondition?: string; logMessage?: string }): Promise<string>;
-    stepOver(): Promise<void>;
-    stepInto(): Promise<void>;
-    stepOut(): Promise<void>;
-    resume(): Promise<void>;
-    pause(): Promise<void>;
 }
 
 // ── MCP Server ────────────────────────────────────────────────────────
@@ -143,13 +56,17 @@ async function main(): Promise<void> {
 
     // ── Result helpers ──────────────────────────────────────────────
     const ok = (text: string) => ({ content: [{ type: 'text' as const, text }] });
-    const fail = (e: unknown) => ({ content: [{ type: 'text' as const, text: `Error: ${e}` }], isError: true as const });
+    const fail = (e: unknown) => ({
+        content: [{ type: 'text' as const, text: `Error: ${e}` }],
+        isError: true as const,
+    });
     const json = (data: unknown) => ok(JSON.stringify(data, null, 2));
 
     // ── MCP server ──────────────────────────────────────────────────
+    const serverVersion = process.env['DEBUG_GRAPH_VERSION'] ?? '0.0.0';
     const server = new McpServer({
         name: 'debug-graph-mcp',
-        version: '0.0.1',
+        version: serverVersion,
     });
 
     // ────────── Query tools ──────────────────────────────────────────
@@ -214,13 +131,16 @@ async function main(): Promise<void> {
                 program: z.string().optional().describe('Path to the program to debug'),
             }),
         },
-        async (args) => ok(await api.startDebug({
-            configName: args.configName,
-            type: args.type,
-            name: args.name,
-            request: args.request,
-            program: args.program,
-        })),
+        async (args) =>
+            ok(
+                await api.startDebug({
+                    configName: args.configName,
+                    type: args.type,
+                    name: args.name,
+                    request: args.request,
+                    program: args.program,
+                }),
+            ),
     );
 
     server.registerTool(
@@ -235,46 +155,64 @@ async function main(): Promise<void> {
                 logMessage: z.string().optional().describe('Message logged instead of breaking'),
             }),
         },
-        async (args) => ok(await api.setBreakpoint({
-            file: args.file,
-            line: args.line,
-            condition: args.condition,
-            hitCondition: args.hitCondition,
-            logMessage: args.logMessage,
-        })),
+        async (args) =>
+            ok(
+                await api.setBreakpoint({
+                    file: args.file,
+                    line: args.line,
+                    condition: args.condition,
+                    hitCondition: args.hitCondition,
+                    logMessage: args.logMessage,
+                }),
+            ),
     );
 
     // ────────── Control tools ─────────────────────────────────────────
 
-    server.registerTool(
-        'step_over',
-        { description: 'Step to next line (over).' },
-        async () => { try { await api.stepOver(); return ok('Ok'); } catch (e) { return fail(e); } },
-    );
+    server.registerTool('step_over', { description: 'Step to next line (over).' }, async () => {
+        try {
+            await api.stepOver();
+            return ok('Ok');
+        } catch (e) {
+            return fail(e);
+        }
+    });
 
-    server.registerTool(
-        'step_into',
-        { description: 'Step into the called function.' },
-        async () => { try { await api.stepInto(); return ok('Ok'); } catch (e) { return fail(e); } },
-    );
+    server.registerTool('step_into', { description: 'Step into the called function.' }, async () => {
+        try {
+            await api.stepInto();
+            return ok('Ok');
+        } catch (e) {
+            return fail(e);
+        }
+    });
 
-    server.registerTool(
-        'step_out',
-        { description: 'Step out of the current function.' },
-        async () => { try { await api.stepOut(); return ok('Ok'); } catch (e) { return fail(e); } },
-    );
+    server.registerTool('step_out', { description: 'Step out of the current function.' }, async () => {
+        try {
+            await api.stepOut();
+            return ok('Ok');
+        } catch (e) {
+            return fail(e);
+        }
+    });
 
-    server.registerTool(
-        'resume',
-        { description: 'Continue execution (resume the program).' },
-        async () => { try { await api.resume(); return ok('Ok'); } catch (e) { return fail(e); } },
-    );
+    server.registerTool('resume', { description: 'Continue execution (resume the program).' }, async () => {
+        try {
+            await api.resume();
+            return ok('Ok');
+        } catch (e) {
+            return fail(e);
+        }
+    });
 
-    server.registerTool(
-        'pause',
-        { description: 'Pause execution.' },
-        async () => { try { await api.pause(); return ok('Ok'); } catch (e) { return fail(e); } },
-    );
+    server.registerTool('pause', { description: 'Pause execution.' }, async () => {
+        try {
+            await api.pause();
+            return ok('Ok');
+        } catch (e) {
+            return fail(e);
+        }
+    });
 
     // ── Connect transport & start listening ──────────────────────────
     const transport = new StdioServerTransport();

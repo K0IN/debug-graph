@@ -9,7 +9,6 @@ import {
     Uri,
     WebviewPanel,
     window,
-    workspace,
 } from 'vscode';
 import { ComlinkFrontendApi } from 'shared/src/index';
 import { createWebview, getVueFrontendPanelContent } from './webview/content';
@@ -65,9 +64,13 @@ export async function activate(context: ExtensionContext) {
 
     // ── MCP Debug Bridge ──────────────────────────────────────────────
     const debugBridge = new DebugBridge();
-    await debugBridge.start();
-    context.subscriptions.push({ dispose: () => debugBridge.dispose() });
-    logInfo(`DebugBridge started on port ${debugBridge.port}`);
+    try {
+        await debugBridge.start();
+        context.subscriptions.push({ dispose: () => debugBridge.dispose() });
+        logInfo(`DebugBridge started on port ${debugBridge.port}`);
+    } catch (e) {
+        logError('Failed to start DebugBridge, MCP tools will be unavailable:', e);
+    }
 
     // ── MCP Server Definition Provider ────────────────────────────────
     const MCP_PROVIDER_ID = 'debugGraph.mcpProvider';
@@ -86,6 +89,7 @@ export async function activate(context: ExtensionContext) {
                         [serverPath.fsPath],
                         {
                             DEBUG_BRIDGE_PORT: String(debugBridge.port),
+                            DEBUG_GRAPH_VERSION: context.extension.packageJSON.version,
                             ELECTRON_RUN_AS_NODE: '1',
                         },
                         context.extension.packageJSON.version,
@@ -98,7 +102,7 @@ export async function activate(context: ExtensionContext) {
                 // If you needed to prompt for credentials or config, do it here.
                 return server;
             },
-        })
+        }),
     );
     logInfo('MCP server definition provider registered');
 

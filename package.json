@@ -65,7 +65,7 @@
         "vscode:prepublish": "npm run vscode:package",
         "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map && npm run compile:mcp",
         "vscode:bundle": "npm run vscode:package && vsce package",
-        "vscode:install": "npm run vscode:bundle && code --install-extension call-graph-0.0.1.vsix",
+        "vscode:install": "npm run vscode:bundle && code --install-extension debug-graph-*.vsix",
         "vscode:uninstall": "code --uninstall k0in.call-graph",
         "vscode:publish": "npm run vscode:bundle && vsce publish",
         "lint-frontend": "cd frontend && npm run lint",

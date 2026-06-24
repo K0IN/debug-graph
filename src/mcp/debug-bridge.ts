@@ -4,94 +4,8 @@ import { expose } from 'comlink';
 import { callDebugFunction, getVariablesRecursive } from '../inspect/typed-debug';
 import { logDebug, logError, logInfo } from '../log';
 import type { DebugProtocol } from '@vscode/debugprotocol';
-import type { VariableInfo } from 'shared/src/index';
-
-// ── Public API interface exposed via Comlink ──────────────────────────
-
-export interface StackFrameInfo {
-    id: number;
-    name: string;
-    source?: { name?: string; path?: string };
-    line: number;
-    column: number;
-}
-
-export interface StackTraceResult {
-    stackFrames: StackFrameInfo[];
-    totalFrames?: number;
-}
-
-export interface BreakpointInfo {
-    id: string;
-    enabled: boolean;
-    condition?: string;
-    hitCondition?: string;
-    logMessage?: string;
-}
-
-export interface DebugApi {
-    getActiveSession(): { id: string; name: string; type: string } | null;
-    getStackTraces(): Promise<StackTraceResult>;
-    getVariables(params: { frameId?: number }): Promise<VariableInfo[]>;
-    evaluate(params: { expression: string; frameId?: number }): Promise<string>;
-    getBreakpoints(): BreakpointInfo[];
-    startDebug(params: { configName?: string; type?: string; name?: string; request?: string; program?: string }): Promise<string>;
-    setBreakpoint(params: { file: string; line: number; condition?: string; hitCondition?: string; logMessage?: string }): Promise<string>;
-    stepOver(): Promise<void>;
-    stepInto(): Promise<void>;
-    stepOut(): Promise<void>;
-    resume(): Promise<void>;
-    pause(): Promise<void>;
-}
-
-// ── Comlink transport helpers ─────────────────────────────────────────
-
-/**
- * Translates a Comlink `Endpoint` (MessagePort-like) into a Comlink-compatible
- * transport over a raw TCP socket. Messages are framed as JSON + newline.
- *
- * Mirrors the logic of `node-adapter` from Comlink but adapted for net.Socket.
- */
-function comlinkEndpointFromSocket(socket: net.Socket) {
-    const listeners = new Set<(event: { data: unknown }) => void>();
-    let buffer = '';
-
-    socket.on('data', (chunk: Buffer) => {
-        buffer += chunk.toString('utf-8');
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) {continue;}
-            try {
-                const msg = JSON.parse(trimmed);
-                for (const listener of listeners) {
-                    listener({ data: msg });
-                }
-            } catch {
-                // Non-JSON — skip
-            }
-        }
-    });
-
-    socket.on('close', () => listeners.clear());
-    socket.on('error', () => listeners.clear());
-
-    return {
-        postMessage(msg: unknown) {
-            socket.write(JSON.stringify(msg) + '\n');
-        },
-        addEventListener(_type: string, eh: (event: { data: unknown }) => void) {
-            listeners.add(eh);
-        },
-        removeEventListener(_type: string, eh: (event: { data: unknown }) => void) {
-            listeners.delete(eh);
-        },
-        start() {
-            // socket is already open
-        },
-    };
-}
+import { comlinkEndpointFromSocket } from './transport';
+import type { DebugApi } from './debug-api';
 
 // ── Bridge Server (runs inside extension host) ────────────────────────
 
@@ -143,19 +57,25 @@ export class DebugBridge {
     // ── Debug API implementation ──────────────────────────────────────
 
     private api: DebugApi = {
-        getActiveSession: () => {
+        getActiveSession: async () => {
             const session = debug.activeDebugSession;
-            if (!session) { return null; }
+            if (!session) {
+                return null;
+            }
             return { id: session.id, name: session.name, type: session.type };
         },
 
         getStackTraces: async () => {
             const session = debug.activeDebugSession;
-            if (!session) { throw new Error('No active debug session'); }
+            if (!session) {
+                throw new Error('No active debug session');
+            }
 
             const stackItem = debug.activeStackItem;
             const threadId = stackItem?.threadId;
-            if (!threadId) { throw new Error('No active stack frame thread'); }
+            if (!threadId) {
+                throw new Error('No active stack frame thread');
+            }
 
             return callDebugFunction('stackTrace', {
                 threadId,
@@ -169,16 +89,22 @@ export class DebugBridge {
 
             if (frameId === undefined) {
                 const stackItem = debug.activeStackItem;
-                if (!stackItem) { throw new Error('No active stack item'); }
+                if (!stackItem) {
+                    throw new Error('No active stack item');
+                }
 
                 const stackFrame = stackItem as { frameId?: number };
-                if (stackFrame.frameId === undefined) { throw new Error('No frame ID available'); }
+                if (stackFrame.frameId === undefined) {
+                    throw new Error('No frame ID available');
+                }
 
                 const scopesResponse = await callDebugFunction('scopes', {
                     frameId: stackFrame.frameId,
                 });
 
-                if (scopesResponse.scopes.length === 0) { return []; }
+                if (scopesResponse.scopes.length === 0) {
+                    return [];
+                }
 
                 const variablesResponse = await callDebugFunction('variables', {
                     variablesReference: scopesResponse.scopes[0].variablesReference,
@@ -196,7 +122,9 @@ export class DebugBridge {
 
         evaluate: async (params) => {
             const session = debug.activeDebugSession;
-            if (!session) { throw new Error('No active debug session'); }
+            if (!session) {
+                throw new Error('No active debug session');
+            }
 
             const evaluateArgs: DebugProtocol.EvaluateArguments = {
                 expression: params.expression,
@@ -208,13 +136,13 @@ export class DebugBridge {
             return response.result;
         },
 
-        getBreakpoints: () => {
+        getBreakpoints: async () => {
             return debug.breakpoints.map((bp) => ({
                 id: bp.id,
                 enabled: bp.enabled,
-                condition: ('condition' in bp ? (bp as { condition?: string }).condition : undefined),
-                hitCondition: ('hitCondition' in bp ? (bp as { hitCondition?: string }).hitCondition : undefined),
-                logMessage: ('logMessage' in bp ? (bp as { logMessage?: string }).logMessage : undefined),
+                condition: 'condition' in bp ? (bp as { condition?: string }).condition : undefined,
+                hitCondition: 'hitCondition' in bp ? (bp as { hitCondition?: string }).hitCondition : undefined,
+                logMessage: 'logMessage' in bp ? (bp as { logMessage?: string }).logMessage : undefined,
             }));
         },
 
@@ -225,7 +153,9 @@ export class DebugBridge {
                 config = params.configName;
             } else if (params.type && params.name && params.request) {
                 config = { type: params.type, name: params.name, request: params.request };
-            if (params.program) { config.program = params.program; }
+                if (params.program) {
+                    config.program = params.program;
+                }
             } else {
                 throw new Error('Provide configName, or type+name+request');
             }
@@ -248,10 +178,20 @@ export class DebugBridge {
             return `Breakpoint set at ${params.file}:${params.line}`;
         },
 
-        stepOver: async () => { await commands.executeCommand('workbench.action.debug.stepOver'); },
-        stepInto: async () => { await commands.executeCommand('workbench.action.debug.stepInto'); },
-        stepOut: async () => { await commands.executeCommand('workbench.action.debug.stepOut'); },
-        resume: async () => { await commands.executeCommand('workbench.action.debug.continue'); },
-        pause: async () => { await commands.executeCommand('workbench.action.debug.pause'); },
+        stepOver: async () => {
+            await commands.executeCommand('workbench.action.debug.stepOver');
+        },
+        stepInto: async () => {
+            await commands.executeCommand('workbench.action.debug.stepInto');
+        },
+        stepOut: async () => {
+            await commands.executeCommand('workbench.action.debug.stepOut');
+        },
+        resume: async () => {
+            await commands.executeCommand('workbench.action.debug.continue');
+        },
+        pause: async () => {
+            await commands.executeCommand('workbench.action.debug.pause');
+        },
     };
 }
