@@ -544,7 +544,9 @@ function createMcpServer(): McpServer {
                 const uri = Uri.file(args.file);
                 const content = new TextDecoder().decode(await workspace.fs.readFile(uri));
                 if (args.startLine !== undefined) {
-                    const lines = content.split('\n');
+                    // Normalize line endings so \r\n and \r count as single line breaks
+                    const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                    const lines = normalized.split('\n');
                     const start = Math.max(0, args.startLine - 1);
                     const end = args.endLine !== undefined ? Math.min(lines.length, args.endLine) : lines.length;
                     return json(lines.slice(start, end).join('\n'));
