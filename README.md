@@ -19,7 +19,7 @@
 
 ## Why?
 
-**The built-in VS Code debugger shows you *where* you are. Debug Graph shows you *how you got there*.**
+**The built-in VS Code debugger shows you _where_ you are. Debug Graph shows you _how you got there_.**
 
 When you hit a breakpoint, the standard call stack is a flat, text-heavy list. You have to click through each frame one at a time, mentally reconstructing the call chain. If you want to know a variable's value three frames up, you switch frames, scroll, squint, switch back. You repeat this hundreds of times a day.
 
@@ -33,14 +33,14 @@ And if you're using AI coding agents (Copilot, Cursor, Claude Code), Debug Graph
   <img src="./.docs/images/basic_example.gif" alt="Call graph visualization" width="700"/>
 </p>
 
-| Capability | What you get |
-|---|---|
-| 🗺️ **Visual Call Tree** | Every function in the call chain displayed with its full source code, stacked vertically. Scroll through the entire execution path at a glance |
-| 🔍 **Inline Variable Inspection** | Hover over any identifier in any frame to see its runtime value — no switching frames, no debug console |
-| 🎯 **One-Click Navigation** | Click any frame header to jump to that exact line in your editor. Click "Highlight Frame" to focus the debugger on that stack level |
-| 🧹 **Executed-Code-Only Mode** | Collapses functions to show only the lines that actually ran. See the execution path without the noise |
-| 🌐 **Any Languages, One Tool** | Go, Python, JavaScript, TypeScript, C, C++, Rust, C#, Zig - same UI, same workflow |
-| 🤖 **AI Agent Debugger (MCP)** | 20 tools + 1 prompt that let AI coding agents control the debugger directly. [See below](#-mcp-server---give-your-ai-agent-a-debugger) |
+| Capability                        | What you get                                                                                                                                   |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🗺️ **Visual Call Tree**           | Every function in the call chain displayed with its full source code, stacked vertically. Scroll through the entire execution path at a glance |
+| 🔍 **Inline Variable Inspection** | Hover over any identifier in any frame to see its runtime value — no switching frames, no debug console                                        |
+| 🎯 **One-Click Navigation**       | Click any frame header to jump to that exact line in your editor. Click "Highlight Frame" to focus the debugger on that stack level            |
+| 🧹 **Executed-Code-Only Mode**    | Collapses functions to show only the lines that actually ran. See the execution path without the noise                                         |
+| 🌐 **Any Languages, One Tool**    | Go, Python, JavaScript, TypeScript, C, C++, Rust, C#, Zig - same UI, same workflow                                                             |
+| 🤖 **AI Agent Debugger (MCP)**    | 20 tools + 1 prompt that let AI coding agents control the debugger directly. [See below](#-mcp-server---give-your-ai-agent-a-debugger)         |
 
 ---
 
@@ -49,6 +49,7 @@ And if you're using AI coding agents (Copilot, Cursor, Claude Code), Debug Graph
 **This is the headline feature.** Debug Graph includes a built-in [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes the VS Code debugger to AI agents.
 
 Your Copilot, Cursor agent, or Claude Code can now:
+
 - Start and stop debug sessions
 - Set and remove breakpoints
 - Step through code (over, into, out)
@@ -57,16 +58,6 @@ Your Copilot, Cursor agent, or Claude Code can now:
 - Read source files
 - List threads and switch between them
 - Wait for breakpoint hits with timeouts
-
-### The 20 Tools
-
-| Category | Tools |
-|---|---|
-| **Session** | `get_active_session`, `list_debug_configs`, `start_debug`, `stop_debug`, `restart`, `disconnect` |
-| **Breakpoints** | `list_breakpoints`, `set_breakpoint` (source + function), `remove_breakpoint` |
-| **Execution** | `resume`, `pause`, `step_over`, `step_into`, `step_out` |
-| **Inspection** | `get_stack_trace` (per thread), `list_threads`, `get_variables` (all scopes, per frame), `evaluate` (per frame), `get_source` |
-| **Coordination** | `wait_for_breakpoint_hit` (with timeout, early-return if already paused) |
 
 ### How Agents Use It
 
@@ -98,17 +89,17 @@ To disable: set `"debug-graph.mcp.enabled": false` in VS Code settings, then run
 
 Works with **any** VS Code debug adapter. Tested and verified:
 
-| Language | Debugger | Linux | Windows | Notes |
-|---|---|---|---|---|
-| Go | delve | ✅ | ✅ | Full symbol resolution |
-| Python | debugpy | ✅ | ✅ | |
-| JavaScript | Node.js | ✅ | ✅ | |
-| TypeScript | pwa-node | ✅ | ✅ | Deno runtime |
-| C++ | GDB | ✅ | ❔ | |
-| C | GDB | ✅ | ❔ | |
-| Rust | LLDB | ✅ | ❔ | |
-| C# | dotnet | ✅ | ✅ | .NET 6 & 8 |
-| Zig | LLDB | ✅ | ❔ | v0.14 |
+| Language   | Debugger | Linux | Windows | Notes                  |
+| ---------- | -------- | ----- | ------- | ---------------------- |
+| Go         | delve    | ✅    | ✅      | Full symbol resolution |
+| Python     | debugpy  | ✅    | ✅      |                        |
+| JavaScript | Node.js  | ✅    | ✅      |                        |
+| TypeScript | pwa-node | ✅    | ✅      | Deno runtime           |
+| C++        | GDB      | ✅    | ❔      |                        |
+| C          | GDB      | ✅    | ❔      |                        |
+| Rust       | LLDB     | ✅    | ❔      |                        |
+| C#         | dotnet   | ✅    | ✅      | .NET 6 & 8             |
+| Zig        | LLDB     | ✅    | ❔      | v0.14                  |
 
 ✅ Verified &nbsp;&nbsp; ❌ Known issues &nbsp;&nbsp; ❔ Not yet tested
 
@@ -163,6 +154,7 @@ Or search "Debug Graph" in the Extensions panel.
 ```
 
 **Key design decisions:**
+
 - **No child process for MCP** — runs in-process via `http.Server`, zero latency, no serialization overhead
 - **Monaco in webview** — full editor fidelity, VS Code theme matching, hover providers
 - **Comlink RPC** — typed, bidirectional communication between extension host and webview
@@ -187,14 +179,14 @@ Press F5 to launch the Extension Development Host.
 
 ## 📦 Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Extension host | TypeScript, VS Code API, Debug Adapter Protocol |
-| MCP server | `@modelcontextprotocol/server`, Zod, Streamable HTTP |
-| Webview UI | Vue 3, Pinia, Monaco Editor |
-| RPC bridge | Comlink (Google Chrome Labs) |
-| Frontend build | Vite, esbuild |
-| Extension bundle | Webpack |
+| Layer            | Technology                                           |
+| ---------------- | ---------------------------------------------------- |
+| Extension host   | TypeScript, VS Code API, Debug Adapter Protocol      |
+| MCP server       | `@modelcontextprotocol/server`, Zod, Streamable HTTP |
+| Webview UI       | Vue 3, Pinia, Monaco Editor                          |
+| RPC bridge       | Comlink (Google Chrome Labs)                         |
+| Frontend build   | Vite, esbuild                                        |
+| Extension bundle | Webpack                                              |
 
 ---
 
@@ -207,4 +199,3 @@ MIT — see [LICENSE](https://github.com/K0IN/stacktrace-history/LICENSE).
 <p align="center">
   <sub>Built with ❤️ for developers who are tired of `console.log` debugging.</sub>
 </p>
-
