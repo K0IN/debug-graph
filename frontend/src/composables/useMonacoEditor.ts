@@ -97,6 +97,13 @@ export function useMonacoEditor() {
 
   function setLineNumberOffset(offset: number) {
     lineNumberBase = offset
+    // Force Monaco to re-evaluate the lineNumbers callback after offset change
+    const ed = currentEditor.value
+    if (ed) {
+      ed.updateOptions({
+        lineNumbers: (lineNumber: number) => String(lineNumber + lineNumberBase)
+      })
+    }
   }
 
   return {
