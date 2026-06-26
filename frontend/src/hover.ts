@@ -1,53 +1,71 @@
-import type { IMarkdownString } from "monaco-editor";
-import type { ValueLookupResult, VariableInfo } from "shared/src";
+import type { IMarkdownString } from 'monaco-editor'
+import type { ValueLookupResult, VariableInfo } from 'shared/src'
 
-function escapeHtml(unsafe: string): string {
-    return unsafe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// ── helpers ───────────────────────────────────────────────────────────
+
+function esc(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
+/** Render a single variable row and recurse into its children. */
+function renderRow(v: VariableInfo, depth: number): string {
+  const indent = '&nbsp;'.repeat(depth * 4 + 2)
+  const hasKids = v.subVariables && v.subVariables.length > 0
 
-function format(variable: VariableInfo, indent = 0): string {
-    const indentStr = '&nbsp;'.repeat(indent);
-    if (variable.value === '') {
-        return indentStr + `\`${variable.name}\``;
-    } else if (variable.type) {
-        return indentStr + `\`${variable.type}\` \`${variable.name}\` => \`${variable.value}\``;
-    } else {
-        return indentStr + `\`${variable.name}\` => \`${variable.value}\``;
+  let row = '<tr>'
+
+  // name column
+  row += `<td>${indent}`
+  if (v.type) {
+    row += `<span style="color:var(--vscode-symbolIcon-variableForeground,#569cd6);">${esc(v.type)}</span><b style="color:var(--vscode-debugTokenExpression-name,#9cdcfe);"> ${esc(v.name)}</b>`
+  } else {
+    row += `<b style="color:var(--vscode-debugTokenExpression-name,#9cdcfe);">${esc(v.name)}</b>`
+  }
+  row += '</td>'
+
+  // value column
+  row += '<td>'
+  row += `<span style="color:var(--vscode-debugTokenExpression-value,#ce9178);">${esc(v.value)}</span>`
+  row += '</td>'
+
+  row += '</tr>'
+
+  if (hasKids) {
+    for (const child of v.subVariables!) {
+      row += renderRow(child, depth + 1)
     }
+  }
+  return row
 }
 
-
-function showComplexValue(titles: VariableInfo[]): string {
-    let output = '';
-    for (const variable of titles) {
-        output += `<h3>${escapeHtml(variable.name)}</h3>`;
-        output += '<table><tr><th>Name</th><th>Type</th><th >Value</th></tr>';
-        for (const subVariable of variable.subVariables || []) {
-            output += `<tr><td>${escapeHtml(subVariable.name)}</td><td >${escapeHtml(subVariable.type || '')}</td><td>${escapeHtml(subVariable.value)}</td></tr>`;
-        }
-        output += '</table>';
-    }
-    return output;
-}
-
+// ── public API ────────────────────────────────────────────────────────
 
 export async function generateHoverContent(result?: ValueLookupResult): Promise<IMarkdownString[]> {
-    if (!result || !result.formattedValue) {
-        return [];
+  if (!result) return []
+
+  const allVars = result.variableInfo || []
+  if (allVars.length === 0 && !result.formattedValue) return []
+
+  const contents: IMarkdownString[] = []
+
+  // ── evaluated value ──
+  if (result.formattedValue) {
+    contents.push({ value: '```\n' + result.formattedValue + '\n```' })
+  }
+
+  // ── structured variable tree ──
+  if (allVars.length > 0) {
+    let html = '<table style="width:100%;border-collapse:collapse;border-spacing:0;">'
+    for (const v of allVars) {
+      html += renderRow(v, 0)
     }
-    const results: IMarkdownString[] = [{ value: `${result.formattedValue}\n\n---------------------\n\n` }];
+    html += '</table>'
+    contents.push({ value: html, supportHtml: true })
+  }
 
-    const allVariablesTopLevel = result.variableInfo?.filter((v) => !v.subVariables || v.subVariables.length === 0) || [];
-    const allVariablesSub = result.variableInfo?.filter((v) => v.subVariables && v.subVariables.length > 0) || [];
-
-    if (allVariablesTopLevel.length > 0) {
-        results.push({ value: allVariablesTopLevel.map((r) => format(r)).join('\n\n') + '\n\n---------------------\n\n' });
-    }
-
-    if (allVariablesSub.length > 0) {
-        results.push({ value: showComplexValue(allVariablesSub), supportHtml: true });
-    }
-
-    return results;
+  return contents
 }
