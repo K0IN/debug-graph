@@ -17,7 +17,7 @@ export function useMonacoEditor() {
     lineNumbers: (lineNumber: number) => String(lineNumber + lineNumberBase),
     scrollbar: { vertical: 'auto', horizontal: 'auto' },
     scrollBeyondLastLine: false,
-    stickyScrolling: false,
+    stickyScroll: { enabled: false },
     automaticLayout: false,
     contextmenu: false
   } as editor.IEditorOptions
@@ -53,16 +53,16 @@ export function useMonacoEditor() {
   }
 
   function layoutEditor(editor: editor.IStandaloneCodeEditor, fullScopes?: boolean) {
-    const lineCount = editor.getModel()?.getLineCount() ?? 0
-    const lineHeight = 18 // Standard line height for Monaco
-    const contentHeight = lineCount * lineHeight
+    const contentHeight = editor.getContentHeight()
 
     if (fullScopes) {
-      editor.layout({ width: 100, height: contentHeight + 10 })
+      editor.layout({ width: 100, height: contentHeight })
       return
     }
 
-    const targetHeight = Math.min(Math.max(contentHeight + 10, 50), 370)
+    console.log(editor, contentHeight)
+
+    const targetHeight = Math.min(Math.max(contentHeight, 50), 370)
     editor.layout({ width: 100, height: targetHeight })
   }
 
