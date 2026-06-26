@@ -3,11 +3,13 @@ import { inject, ref } from 'vue'
 import * as Comlink from 'comlink/dist/esm/comlink'
 import type { ComlinkFrontendApi, StackTraceInfo, CallLocation } from 'shared/src'
 import type { Endpoint } from 'comlink'
+import type { WebviewApi } from 'vscode-webview'
 
 export const useVsEvents = defineStore('vscode-backend', () => {
   console.log('Initializing backend store')
 
   const channels = inject<Endpoint>('comlinkChannels')
+  const vscodeApi = inject<WebviewApi<unknown>>('vscode')
   console.log('Comlink channels', channels)
   const stackTrace = ref<StackTraceInfo>([])
 
@@ -22,6 +24,9 @@ export const useVsEvents = defineStore('vscode-backend', () => {
   }
 
   Comlink.expose(frontendApi, channels)
+
+  // Signal to extension that the webview is fully initialized and ready to receive data
+  vscodeApi?.postMessage({ type: 'webviewReady' })
 
   return {
     stackTrace

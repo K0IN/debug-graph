@@ -275,9 +275,44 @@ export async function activate(context: ExtensionContext) {
                     currentFrontendRpcChannel = undefined;
                 });
 
+                // Refresh stacktrace when panel becomes visible again
+                currentPanel.onDidChangeViewState((e) => {
+                    if (e.webviewPanel.visible && !isInitializing && !isUpdating) {
+                        logDebug('Panel became visible, refreshing stacktrace');
+                        if (debug.activeDebugSession) {
+                            updateView();
+                        }
+                    }
+                });
+
                 currentPanel.webview.html = getVueFrontendPanelContent(context, currentPanel);
-                logDebug('Waiting 1s for webview to load');
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+
+                // Wait for webview ready signal (with fallback timeout) instead of hardcoded 1s
+                const WEBVIEW_READY_TIMEOUT_MS = 3000;
+                const webviewReady = new Promise<void>((resolve) => {
+                    const disposable = currentPanel!.webview.onDidReceiveMessage(
+                        (msg) => {
+                            if (
+                                msg &&
+                                typeof msg === 'object' &&
+                                (msg as Record<string, unknown>).type === 'webviewReady'
+                            ) {
+                                logDebug('Webview ready signal received');
+                                disposable.dispose();
+                                resolve();
+                            }
+                        },
+                        undefined,
+                        context.subscriptions,
+                    );
+                });
+                const readyTimeout = new Promise<void>((resolve) => {
+                    setTimeout(() => {
+                        logDebug('Webview ready timeout expired, proceeding anyway');
+                        resolve();
+                    }, WEBVIEW_READY_TIMEOUT_MS);
+                });
+                await Promise.race([webviewReady, readyTimeout]);
 
                 isInitializing = false;
                 if (pendingUpdate) {
