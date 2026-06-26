@@ -1,114 +1,114 @@
 {
-    "name": "debug-graph",
-    "displayName": "debug-graph",
-    "description": "A Visual Studio Code extension that shows all the function calls (code paths) that lead to a breakpoint.",
-    "version": "0.0.2",
-    "icon": "assets/ui-hint.png",
-    "licenses": [
+  "name": "debug-graph",
+  "displayName": "debug-graph",
+  "description": "A Visual Studio Code extension that shows all the function calls (code paths) that lead to a breakpoint.",
+  "version": "0.0.2",
+  "icon": "assets/ui-hint.png",
+  "licenses": [
+    {
+      "url": "https://github.com/K0IN/stacktrace-history/LICENSE",
+      "type": "MIT"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/K0IN/stacktrace-history.git"
+  },
+  "engines": {
+    "vscode": "^1.125.0"
+  },
+  "categories": [
+    "Other",
+    "Debuggers",
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onDebug",
+    "onWebviewPanel:graph-visualization"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "call-graph.show-call-graph",
+        "title": "show call graph",
+        "category": "Debug",
+        "icon": {
+          "dark": "assets/ui-hint.svg",
+          "light": "assets/ui-hint.svg"
+        },
+        "shortTitle": "Call Graph"
+      },
+      {
+        "command": "call-graph.show-output",
+        "title": "Show Debug Graph Output Channel",
+        "category": "Debug"
+      }
+    ],
+    "menus": {
+      "editor/title": [
         {
-            "url": "https://github.com/K0IN/stacktrace-history/LICENSE",
-            "type": "MIT"
+          "command": "call-graph.show-call-graph",
+          "when": "inDebugMode",
+          "group": "navigation"
         }
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/K0IN/stacktrace-history.git"
-    },
-    "engines": {
-        "vscode": "^1.91.0"
-    },
-    "categories": [
-        "Other",
-        "Debuggers",
-        "Visualization"
-    ],
-    "activationEvents": [
-        "onDebug",
-        "onWebviewPanel:graph-visualization"
-    ],
-    "main": "./dist/extension.js",
-    "contributes": {
-        "commands": [
-            {
-                "command": "call-graph.show-call-graph",
-                "title": "show call graph",
-                "category": "Debug",
-                "icon": {
-                    "dark": "assets/ui-hint.svg",
-                    "light": "assets/ui-hint.svg"
-                },
-                "shortTitle": "Call Graph"
-            },
-            {
-                "command": "call-graph.show-output",
-                "title": "Show Debug Graph Output Channel",
-                "category": "Debug"
-            }
-        ],
-        "menus": {
-            "editor/title": [
-                {
-                    "command": "call-graph.show-call-graph",
-                    "when": "inDebugMode",
-                    "group": "navigation"
-                }
-            ]
-        }
-    },
-    "scripts": {
-        "vscode:prepublish": "npm run vscode:package",
-        "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map",
-        "vscode:bundle": "npm run vscode:package && vsce package",
-        "vscode:install": "npm run vscode:bundle && code --install-extension call-graph-0.0.1.vsix",
-        "vscode:uninstall": "code --uninstall k0in.call-graph",
-        "vscode:publish": "npm run vscode:bundle && vsce publish",
-        "lint-frontend": "cd frontend && npm run lint",
-        "compile-frontend": "cd frontend && npm run build",
-        "watch-frontend": "cd frontend && npm run watch",
-        "lint": "eslint . --ext ts",
-        "compile": "webpack",
-        "watch": "npm run compile-frontend && webpack --watch",
-        "lint-all": "npm run lint && npm run lint-frontend",
-        "compile-all": "npm run compile && npm run compile-frontend",
-        "watch-all": "npm run watch && npm run watch-frontend",
-        "compile-tests": "tsc -p ./ --outDir out",
-        "watch-tests": "tsc -p ./ -w --outDir out",
-        "pretest": "npm run compile-tests && npm run compile && npm run lint",
-        "test": "vscode-test",
-        "build": "npm run compile-all",
-        "install-deps": "npm i && cd frontend && npm i"
-    },
-    "devDependencies": {
-        "@types/glob": "^8.1.0",
-        "@types/mocha": "^10.0.7",
-        "@types/node": "25.x",
-        "@types/vscode": "^1.125.0",
-        "@typescript-eslint/eslint-plugin": "^7.14.1",
-        "@typescript-eslint/parser": "^7.11.0",
-        "@vscode/test-cli": "^0.0.12",
-        "@vscode/test-electron": "^2.4.1",
-        "@vscode/vsce": "^2.31.1",
-        "eslint": "^8.57.0",
-        "glob": "^8.1.0",
-        "mocha": "^10.2.0",
-        "ts-loader": "^9.5.1",
-        "typescript": "^5.5.3",
-        "webpack": "^5.107.2",
-        "webpack-cli": "^5.1.4"
-    },
-    "dependencies": {
-        "@modelcontextprotocol/client": "^2.0.0-alpha.2",
-        "@modelcontextprotocol/server": "^2.0.0-alpha.2",
-        "@vscode/debugprotocol": "^1.66.0",
-        "comlink": "^4.4.1",
-        "shared": "file:shared",
-        "zod": "^3.25.0-beta.20250519T094321"
-    },
-    "bugs": {
-        "url": "https://github.com/K0IN/stacktrace-history/issues"
-    },
-    "homepage": "https://github.com/K0IN/stacktrace-history#readme",
-    "author": "k0in",
-    "publisher": "k0in",
-    "license": "ISC"
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run vscode:package",
+    "vscode:package": "npm run compile-frontend && webpack --mode production --devtool hidden-source-map",
+    "vscode:bundle": "npm run vscode:package && vsce package",
+    "vscode:install": "npm run vscode:bundle && code --install-extension call-graph-0.0.1.vsix",
+    "vscode:uninstall": "code --uninstall k0in.call-graph",
+    "vscode:publish": "npm run vscode:bundle && vsce publish",
+    "lint-frontend": "cd frontend && npm run lint",
+    "compile-frontend": "cd frontend && npm run build",
+    "watch-frontend": "cd frontend && npm run watch",
+    "lint": "eslint . --ext ts",
+    "compile": "webpack",
+    "watch": "npm run compile-frontend && webpack --watch",
+    "lint-all": "npm run lint && npm run lint-frontend",
+    "compile-all": "npm run compile && npm run compile-frontend",
+    "watch-all": "npm run watch && npm run watch-frontend",
+    "compile-tests": "tsc -p ./ --outDir out",
+    "watch-tests": "tsc -p ./ -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "test": "vscode-test",
+    "build": "npm run compile-all",
+    "install-deps": "npm i && cd frontend && npm i"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "25.x",
+    "@types/vscode": "^1.125.0",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.11.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^2.31.1",
+    "eslint": "^8.57.0",
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.5.3",
+    "webpack": "^5.107.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0-alpha.2",
+    "@modelcontextprotocol/server": "^2.0.0-alpha.2",
+    "@vscode/debugprotocol": "^1.66.0",
+    "comlink": "^4.4.1",
+    "shared": "file:shared",
+    "zod": "^3.25.0-beta.20250519T094321"
+  },
+  "bugs": {
+    "url": "https://github.com/K0IN/stacktrace-history/issues"
+  },
+  "homepage": "https://github.com/K0IN/stacktrace-history#readme",
+  "author": "k0in",
+  "publisher": "k0in",
+  "license": "ISC"
 }
