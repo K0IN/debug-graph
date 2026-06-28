@@ -209,19 +209,44 @@ async function tryGetCallLocation(
 }
 
 function stubCallLocation(frame: DebugProtocol.StackFrame): CallLocation {
-    const path = frame.source?.path;
+    const rawPath = frame.source?.path;
+    const path = normalizeSourcePath(rawPath);
     const name = frame.source?.name;
     logDebug(
-        `stubCallLocation frame ${frame.id}: path=${path ?? '<unknown>'}, name=${name ?? '<unknown>'}, line=${frame.line}, func=${frame.name}`,
+        `stubCallLocation frame ${frame.id}: rawPath=${rawPath ?? '<unknown>'}, normalizedPath=${path}, name=${name ?? '<unknown>'}, line=${frame.line}, func=${frame.name}`,
     );
     return {
         code: '<source not found>',
-        file: path ?? '<unknown>',
+        file: path,
         frameId: frame.id,
         language: 'plaintext',
         fileLocationOffset: { startLine: frame.line, startCharacter: 0 },
         locationInCode: { startLine: 0, startCharacter: 0 },
     };
+}
+
+/**
+ * Normalize a source path from a debug adapter.
+ *
+ * In dev containers, `frame.source.path` may be a `vscode-remote://` URI
+ * (e.g. `vscode-remote://dev-container+.../workspaces/foo/main.go`).
+ * This function extracts the actual filesystem path from such URIs.
+ */
+function normalizeSourcePath(rawPath: string | undefined): string {
+    if (!rawPath) {
+        return '<unknown>';
+    }
+    try {
+        if (rawPath.startsWith('vscode-remote://')) {
+            const parsed = Uri.parse(rawPath);
+            const fsPath = parsed.path;
+            logDebug(`normalizeSourcePath: ${rawPath} -> ${fsPath}`);
+            return fsPath;
+        }
+    } catch {
+        // ignore parse errors, return raw path
+    }
+    return rawPath;
 }
 
 async function getCallLocation(
@@ -234,30 +259,43 @@ async function getCallLocation(
         return stubCallLocation(frame);
     }
 
+    // Normalize source path (handle vscode-remote:// URIs from dev containers)
+    const normalizedPath = normalizeSourcePath(frame.source.path);
+    logDebug(`getCallLocation frame ${frame.id}: normalized path ${normalizedPath}`);
+
     // Try primary path resolution
     try {
-        const file = Uri.file(frame.source.path);
-        logDebug(`getCallLocation frame ${frame.id}: trying primary path ${frame.source.path}`);
+        const file = Uri.file(normalizedPath);
+        logDebug(`getCallLocation frame ${frame.id}: trying primary path ${normalizedPath}`);
         const location = await tryGetCallLocation(file, frame, token, fileCache);
         if (location) {
-            logDebug(`getCallLocation frame ${frame.id}: primary path succeeded (${frame.source.path})`);
+            logDebug(`getCallLocation frame ${frame.id}: primary path succeeded (${normalizedPath})`);
             return location;
         }
     } catch (e) {
         logWarn(`getCallLocation frame ${frame.id}: primary path failed`, e);
     }
 
-    // Try alternative path resolution
-    try {
-        logDebug(`getCallLocation frame ${frame.id}: trying alternative path resolution`);
-        const file = Uri.from({ scheme: 'file', path: frame.source.path });
-        const location = await tryGetCallLocation(file, frame, token, fileCache);
-        if (location) {
-            logDebug(`getCallLocation frame ${frame.id}: alternative path succeeded`);
-            return location;
+    // Try direct file open for absolute paths that may not be in workspace (e.g. Go stdlib)
+    if (normalizedPath.startsWith('/')) {
+        try {
+            logDebug(`getCallLocation frame ${frame.id}: trying direct absolute path ${normalizedPath}`);
+            const file = Uri.file(normalizedPath);
+            // Check if file exists by trying to stat it
+            try {
+                await workspace.fs.stat(file);
+                logDebug(`getCallLocation frame ${frame.id}: file exists on disk, trying to resolve`);
+                const location = await tryGetCallLocation(file, frame, token, fileCache);
+                if (location) {
+                    logDebug(`getCallLocation frame ${frame.id}: direct absolute path succeeded`);
+                    return location;
+                }
+            } catch {
+                logDebug(`getCallLocation frame ${frame.id}: file not found on disk at ${normalizedPath}`);
+            }
+        } catch (e) {
+            logWarn(`getCallLocation frame ${frame.id}: direct absolute path failed`, e);
         }
-    } catch (e) {
-        logWarn(`getCallLocation frame ${frame.id}: alternative path failed`, e);
     }
 
     // Fallback - find file by name
@@ -341,6 +379,7 @@ export async function getStacktraceInfo(token?: CancellationToken): Promise<Stac
             `callpath frame ${loc.frameId}: ${status} file=${loc.file}, line=${loc.fileLocationOffset.startLine}, func=<from debug>, language=${loc.language}`,
         );
     }
+    logDebug(`Stacktrace info fetched, frames: ${callLocations.length}`);
 
     return callLocations;
 }
