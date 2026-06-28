@@ -163,6 +163,7 @@ async function tryGetCallLocation(
     if (token?.isCancellationRequested) {
         throw new Error('cancelled');
     }
+    logDebug(`tryGetCallLocation frame ${frame.id}: file=${file.path}, line=${frame.line}, func=${frame.name}`);
     const zeroIndexedLine = frame.line - 1;
     const noFunctionLookupSize = 3;
     let symbolLocation: Range | undefined;
@@ -186,6 +187,10 @@ async function tryGetCallLocation(
 
     const language = getLanguageForFileCached(file, cache);
 
+    logDebug(
+        `tryGetCallLocation frame ${frame.id}: file=${file.path}, line=${frame.line}, func=${frame.name}, language=${language}, symbolLine=${symbolLocation?.start.line}, symbolEndLine=${symbolLocation?.end.line}, codeLen=${code?.length ?? 0}`,
+    );
+
     return <CallLocation>{
         code,
         file: file.path,
@@ -204,12 +209,17 @@ async function tryGetCallLocation(
 }
 
 function stubCallLocation(frame: DebugProtocol.StackFrame): CallLocation {
+    const path = frame.source?.path;
+    const name = frame.source?.name;
+    logDebug(
+        `stubCallLocation frame ${frame.id}: path=${path ?? '<unknown>'}, name=${name ?? '<unknown>'}, line=${frame.line}, func=${frame.name}`,
+    );
     return {
         code: '<source not found>',
-        file: frame.source?.path ?? '<unknown>',
+        file: path ?? '<unknown>',
         frameId: frame.id,
         language: 'plaintext',
-        fileLocationOffset: { startLine: 0, startCharacter: 0 },
+        fileLocationOffset: { startLine: frame.line, startCharacter: 0 },
         locationInCode: { startLine: 0, startCharacter: 0 },
     };
 }
@@ -230,6 +240,7 @@ async function getCallLocation(
         logDebug(`getCallLocation frame ${frame.id}: trying primary path ${frame.source.path}`);
         const location = await tryGetCallLocation(file, frame, token, fileCache);
         if (location) {
+            logDebug(`getCallLocation frame ${frame.id}: primary path succeeded (${frame.source.path})`);
             return location;
         }
     } catch (e) {
@@ -242,6 +253,7 @@ async function getCallLocation(
         const file = Uri.from({ scheme: 'file', path: frame.source.path });
         const location = await tryGetCallLocation(file, frame, token, fileCache);
         if (location) {
+            logDebug(`getCallLocation frame ${frame.id}: alternative path succeeded`);
             return location;
         }
     } catch (e) {
@@ -256,11 +268,19 @@ async function getCallLocation(
             (file) => frame.source?.name && file.fsPath.endsWith(frame.source?.name),
         );
         logDebug(`getCallLocation frame ${frame.id}: found ${filesWithSameName.length} matching files in workspace`);
+        for (const f of filesWithSameName) {
+            logDebug(`getCallLocation frame ${frame.id}:   candidate: ${f.fsPath}`);
+        }
         if (filesWithSameName.length === 1) {
             const location = await tryGetCallLocation(filesWithSameName[0], frame, token, fileCache);
             if (location) {
+                logDebug(
+                    `getCallLocation frame ${frame.id}: workspace file search succeeded: ${filesWithSameName[0].fsPath}`,
+                );
                 return location;
             }
+        } else if (filesWithSameName.length > 1) {
+            logDebug(`getCallLocation frame ${frame.id}: multiple candidates, skipping automatic resolution`);
         }
     } catch (e) {
         logWarn(`getCallLocation frame ${frame.id}: workspace search failed`, e);
@@ -285,6 +305,13 @@ export async function getStacktraceInfo(token?: CancellationToken): Promise<Stac
     });
     logDebug(`getStacktraceInfo: got ${stackFrames.stackFrames.length} frames in ${Date.now() - fetchStart}ms`);
 
+    // Log raw frame info for debugging
+    for (const f of stackFrames.stackFrames) {
+        logDebug(
+            `raw frame ${f.id}: name=${f.name}, line=${f.line}, column=${f.column}, sourcePath=${f.source?.path ?? '<none>'}, sourceName=${f.source?.name ?? '<none>'}`,
+        );
+    }
+
     // Process frames with concurrency limiting and timeout
     const processStart = Date.now();
     const fileCache = new Map<string, FileCacheEntry>();
@@ -306,6 +333,14 @@ export async function getStacktraceInfo(token?: CancellationToken): Promise<Stac
         MAX_CONCURRENT_FRAMES,
     );
     logDebug(`getStacktraceInfo: processed ${callLocations.length} frames in ${Date.now() - processStart}ms`);
+
+    // Log callpath summary for all frames
+    for (const loc of callLocations) {
+        const status = loc.code === '<source not found>' ? '❌ NOT_FOUND' : '✓ OK';
+        logDebug(
+            `callpath frame ${loc.frameId}: ${status} file=${loc.file}, line=${loc.fileLocationOffset.startLine}, func=<from debug>, language=${loc.language}`,
+        );
+    }
 
     return callLocations;
 }
