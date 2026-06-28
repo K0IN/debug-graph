@@ -28,7 +28,18 @@ function switchToStackFrame() {
 
 <template>
   <template v-if="traceFrame.code === '<source not found>'">
-    <span style="grid-area: path" class="title-element not-found"> &lt;source not found&gt; </span>
+    <vscode-link
+      v-if="traceFrame.file !== '<unknown>'"
+      style="grid-area: path"
+      class="title-element not-found"
+      :href="traceFrame.file"
+      @click="openFile"
+    >
+      {{ traceFrame.file }}:{{ traceFrame.fileLocationOffset.startLine }}
+    </vscode-link>
+    <span v-else style="grid-area: path" class="title-element not-found">
+      &lt;source not found&gt;
+    </span>
     <vscode-button style="grid-area: focus" disabled> highlight frame </vscode-button>
   </template>
   <template v-else>
