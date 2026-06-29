@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import callstack_view from './stacktrace-frame.vue'
-import { editor, languages, Position } from 'monaco-editor'
-import { useMonacoGlobalInit, type MonacoRefType } from './monaco'
+import callstack_view from './stacktrace-frame.vue';
+import { editor, languages, Position } from 'monaco-editor';
+import { useMonacoGlobalInit, type MonacoRefType } from './monaco';
 
-import { generateHoverContent } from './hover'
-import { useGlobalSettingsStore, useVsEvents, useStacktraceMapStore } from './stores'
-import { useBackendApi } from './backend-api'
-import { applyVscodeTheme, watchVscodeThemeChanges } from './theme'
-import { onUnmounted } from 'vue'
+import { generateHoverContent } from './hover';
+import { useGlobalSettingsStore, useVsEvents, useStacktraceMapStore } from './stores';
+import { useBackendApi } from './backend-api';
+import { applyVscodeTheme, watchVscodeThemeChanges } from './theme';
+import { onUnmounted } from 'vue';
 
-const store = useVsEvents()
-const fn = useBackendApi()
-const settings = useGlobalSettingsStore()
-const stacktraceMapStore = useStacktraceMapStore()
+const store = useVsEvents();
+const fn = useBackendApi();
+const settings = useGlobalSettingsStore();
+const stacktraceMapStore = useStacktraceMapStore();
 
-let disposeThemeWatcher: (() => void) | undefined
+let disposeThemeWatcher: (() => void) | undefined;
 
 function initGlobalMonaco(monacoRef: MonacoRefType) {
   monacoRef?.languages.registerHoverProvider('*', {
@@ -24,31 +24,31 @@ function initGlobalMonaco(monacoRef: MonacoRefType) {
       _token: /* CancellationToken */ any,
       _context?: languages.HoverContext<languages.Hover> | undefined
     ): Promise<languages.Hover> => {
-      const callLocationInfo = stacktraceMapStore.getCallLocation(model.id)
+      const callLocationInfo = stacktraceMapStore.getCallLocation(model.id);
       if (!callLocationInfo) {
-        return { contents: [] }
+        return { contents: [] };
       }
-      const lineOffset = callLocationInfo.fileLocationOffset.startLine // offset from the start of the file
+      const lineOffset = callLocationInfo.fileLocationOffset.startLine; // offset from the start of the file
       const result = await fn.getValueForPosition(
         callLocationInfo.file,
         lineOffset - 1 + position.lineNumber - 1,
         position.column,
         callLocationInfo.frameId
-      )
-      const contents = await generateHoverContent(result)
-      return { contents }
+      );
+      const contents = await generateHoverContent(result);
+      return { contents };
     }
-  })
+  });
 
   if (monacoRef) {
-    applyVscodeTheme(monacoRef)
-    disposeThemeWatcher = watchVscodeThemeChanges(monacoRef)
+    applyVscodeTheme(monacoRef);
+    disposeThemeWatcher = watchVscodeThemeChanges(monacoRef);
   }
 }
 
-onUnmounted(() => disposeThemeWatcher?.())
+onUnmounted(() => disposeThemeWatcher?.());
 
-useMonacoGlobalInit(initGlobalMonaco)
+useMonacoGlobalInit(initGlobalMonaco);
 </script>
 
 <template>

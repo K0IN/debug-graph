@@ -1,5 +1,5 @@
-import { Range, type editor } from 'monaco-editor'
-import type { VariableInfo } from 'shared/src'
+import { Range, type editor } from 'monaco-editor';
+import type { VariableInfo } from 'shared/src';
 
 /**
  * Composable for displaying runtime variable values as inline annotations
@@ -55,10 +55,10 @@ const SKIP_WORDS = new Set([
   'from',
   'of',
   'in'
-])
+]);
 
 function shouldSkip(name: string): boolean {
-  return name.length <= 1 || SKIP_WORDS.has(name)
+  return name.length <= 1 || SKIP_WORDS.has(name);
 }
 
 /**
@@ -75,41 +75,41 @@ function shouldSkip(name: string): boolean {
  * Limits to 2 annotations per line total, and at most one annotation per variable.
  */
 function matchVariablesToLines(code: string, variables: VariableInfo[]): Map<number, string[]> {
-  const lines = code.split('\n')
-  const result = new Map<number, string[]>()
+  const lines = code.split('\n');
+  const result = new Map<number, string[]>();
 
   // Pass 1: find the best semantic line for each variable.
-  const bestLine = new Map<string, number>()
+  const bestLine = new Map<string, number>();
 
   for (const v of variables) {
-    if (shouldSkip(v.name)) continue
-    const escaped = v.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const pattern = new RegExp(`\\b${escaped}\\b`)
+    if (shouldSkip(v.name)) continue;
+    const escaped = v.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`\\b${escaped}\\b`);
     const declarationPattern = new RegExp(
       `(?:\\bconst\\b|\\blet\\b|\\bvar\\b)\\s+[^\\n;]*\\b${escaped}\\b|\\b${escaped}\\b\\s*(?::=|=)`
-    )
+    );
     const signaturePattern = new RegExp(
       `(?:function|func|def)\\s+[^\\n]*[\\(,]\\s*\\b${escaped}\\b(?:\\s*[:\\w\\[\\]\\*\\.<>, -]+)?(?:[,\\)])`
-    )
+    );
 
     for (let i = 0; i < lines.length; i++) {
-      if (!pattern.test(lines[i])) continue
+      if (!pattern.test(lines[i])) continue;
 
-      const line = lines[i]
-      const currentBest = bestLine.get(v.name)
-      const trimmed = line.trimStart()
-      if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('#')) continue
+      const line = lines[i];
+      const currentBest = bestLine.get(v.name);
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('#')) continue;
 
       // Priority 1: declaration / assignment line.
       if (declarationPattern.test(line)) {
-        bestLine.set(v.name, i)
-        break
+        bestLine.set(v.name, i);
+        break;
       }
 
       // Priority 2: function signature / parameter list.
       if (signaturePattern.test(line)) {
         if (currentBest === undefined) {
-          bestLine.set(v.name, i)
+          bestLine.set(v.name, i);
         }
       }
     }
@@ -117,71 +117,71 @@ function matchVariablesToLines(code: string, variables: VariableInfo[]): Map<num
 
   // Pass 2: build annotations from the best lines
   for (const v of variables) {
-    if (shouldSkip(v.name)) continue
-    const lineIdx = bestLine.get(v.name)
-    if (lineIdx === undefined) continue
+    if (shouldSkip(v.name)) continue;
+    const lineIdx = bestLine.get(v.name);
+    if (lineIdx === undefined) continue;
 
-    const existing = result.get(lineIdx) ?? []
-    if (existing.length >= 2) continue // max 2 annotations per line
+    const existing = result.get(lineIdx) ?? [];
+    if (existing.length >= 2) continue; // max 2 annotations per line
 
-    existing.push(`${v.name} = ${truncateValue(v.value)}`)
-    result.set(lineIdx, existing)
+    existing.push(`${v.name} = ${truncateValue(v.value)}`);
+    result.set(lineIdx, existing);
   }
 
-  return result
+  return result;
 }
 
 function truncateValue(value: string, maxLen = 50): string {
-  if (value.length <= maxLen) return value
-  return value.substring(0, maxLen - 3) + '...'
+  if (value.length <= maxLen) return value;
+  return value.substring(0, maxLen - 3) + '...';
 }
 
 /**
  * Vue composable for inline value management.
  */
 export function useInlineValues() {
-  let activeDecorations: editor.IEditorDecorationsCollection | undefined
-  let currentEditor: editor.IStandaloneCodeEditor | null = null
-  let currentCode = ''
-  let currentVariables: VariableInfo[] = []
+  let activeDecorations: editor.IEditorDecorationsCollection | undefined;
+  let currentEditor: editor.IStandaloneCodeEditor | null = null;
+  let currentCode = '';
+  let currentVariables: VariableInfo[] = [];
 
   function setEditor(editor: editor.IStandaloneCodeEditor | null) {
-    removeDecorations()
-    currentEditor = editor
+    removeDecorations();
+    currentEditor = editor;
     if (editor && currentVariables.length > 0 && currentCode) {
-      applyDecorations()
+      applyDecorations();
     }
   }
 
   function setCode(code: string) {
-    currentCode = code
+    currentCode = code;
     if (currentEditor && currentVariables.length > 0 && code) {
-      applyDecorations()
+      applyDecorations();
     }
   }
 
   function setVariables(variables: VariableInfo[]) {
-    currentVariables = variables
+    currentVariables = variables;
     if (currentEditor && currentCode && variables.length > 0) {
-      applyDecorations()
+      applyDecorations();
     } else if (variables.length === 0) {
-      removeDecorations()
+      removeDecorations();
     }
   }
 
   function applyDecorations() {
-    if (!currentEditor || !currentCode) return
+    if (!currentEditor || !currentCode) return;
 
-    removeDecorations()
+    removeDecorations();
 
-    const matches = matchVariablesToLines(currentCode, currentVariables)
-    const model = currentEditor.getModel()
-    if (!model) return
+    const matches = matchVariablesToLines(currentCode, currentVariables);
+    const model = currentEditor.getModel();
+    if (!model) return;
 
     const decorations: editor.IModelDeltaDecoration[] = Array.from(matches.entries()).map(
       ([zeroBasedLine, texts]) => {
-        const lineNumber = zeroBasedLine + 1
-        const endColumn = model.getLineMaxColumn(lineNumber)
+        const lineNumber = zeroBasedLine + 1;
+        const endColumn = model.getLineMaxColumn(lineNumber);
         return {
           range: new Range(lineNumber, endColumn, lineNumber, endColumn),
           options: {
@@ -190,23 +190,23 @@ export function useInlineValues() {
               inlineClassName: 'inline-value-annotation'
             }
           }
-        }
+        };
       }
-    )
+    );
 
-    activeDecorations = currentEditor.createDecorationsCollection(decorations)
+    activeDecorations = currentEditor.createDecorationsCollection(decorations);
   }
 
   function removeDecorations() {
-    activeDecorations?.clear()
-    activeDecorations = undefined
+    activeDecorations?.clear();
+    activeDecorations = undefined;
   }
 
   function clear() {
-    removeDecorations()
-    currentEditor = null
-    currentCode = ''
-    currentVariables = []
+    removeDecorations();
+    currentEditor = null;
+    currentCode = '';
+    currentVariables = [];
   }
 
   return {
@@ -215,5 +215,5 @@ export function useInlineValues() {
     setVariables,
     removeDecorations,
     clear
-  }
+  };
 }

@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import type { CallLocation } from 'shared/src'
-import { useStacktraceManagement } from '../composables/useStacktraceManagement'
+import type { CallLocation } from 'shared/src';
+import { useStacktraceManagement } from '../composables/useStacktraceManagement';
 
 const props = defineProps<{
-  traceFrame: CallLocation
-}>()
+  traceFrame: CallLocation;
+}>();
 
 const emit = defineEmits<{
-  openFile: [path: string, line: number]
-  setStackFrameId: [frameId: number]
-}>()
+  openFile: [path: string, line: number];
+  setStackFrameId: [frameId: number];
+}>();
 
-const { getRealLineNumber } = useStacktraceManagement()
+const { getRealLineNumber } = useStacktraceManagement();
 
 function openFile() {
   const realLineNumber = getRealLineNumber(
     props.traceFrame,
     props.traceFrame.locationInCode.startLine
-  )
-  emit('openFile', props.traceFrame.file, realLineNumber)
+  );
+  emit('openFile', props.traceFrame.file, realLineNumber);
 }
 
 function switchToStackFrame() {
-  emit('setStackFrameId', props.traceFrame.frameId)
+  emit('setStackFrameId', props.traceFrame.frameId);
 }
 </script>
 
