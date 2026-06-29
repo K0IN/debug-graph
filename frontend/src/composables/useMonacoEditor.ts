@@ -1,15 +1,15 @@
-import { useMonaco } from '@guolao/vue-monaco-editor'
-import { editor, Range } from 'monaco-editor'
-import type { SerializedRange } from 'shared/src'
-import { shallowRef } from 'vue'
+import { useMonaco } from '@guolao/vue-monaco-editor';
+import { editor, Range } from 'monaco-editor';
+import type { SerializedRange } from 'shared/src';
+import { shallowRef } from 'vue';
 
 export function useMonacoEditor() {
-  const currentEditor = shallowRef<editor.IStandaloneCodeEditor>()
-  const monaco = useMonaco()
+  const currentEditor = shallowRef<editor.IStandaloneCodeEditor>();
+  const monaco = useMonaco();
 
   // Offset added to line numbers so they match the actual file lines.
   // Set per-editor via setLineNumberOffset after mount.
-  let lineNumberBase = 0
+  let lineNumberBase = 0;
 
   const MONACO_EDITOR_OPTIONS = {
     minimap: { enabled: false },
@@ -20,21 +20,21 @@ export function useMonacoEditor() {
     stickyScroll: { enabled: false },
     automaticLayout: false,
     contextmenu: false
-  } as editor.IEditorOptions
+  } as editor.IEditorOptions;
 
   function setEditor(edit: editor.IStandaloneCodeEditor) {
-    currentEditor.value = edit
+    currentEditor.value = edit;
   }
 
   function setDecorators(editor: editor.IStandaloneCodeEditor, position: SerializedRange) {
     try {
-      const currentDecorations = editor.getDecorationsInRange(new Range(1, 1, 9999999, 999999))
-      editor.removeDecorations(currentDecorations?.map((e) => e.id) ?? [])
+      const currentDecorations = editor.getDecorationsInRange(new Range(1, 1, 9999999, 999999));
+      editor.removeDecorations(currentDecorations?.map((e) => e.id) ?? []);
     } catch {
       /* nop */
     }
 
-    const { startLine, startCharacter, endLine, endCharacter } = position
+    const { startLine, startCharacter, endLine, endCharacter } = position;
     editor.createDecorationsCollection([
       {
         range: new Range(
@@ -49,60 +49,60 @@ export function useMonacoEditor() {
           className: 'highlight'
         }
       }
-    ])
+    ]);
   }
 
   function layoutEditor(editor: editor.IStandaloneCodeEditor, fullScopes?: boolean) {
-    const contentHeight = editor.getContentHeight()
+    const contentHeight = editor.getContentHeight();
 
     if (fullScopes) {
-      editor.layout({ width: 100, height: contentHeight })
-      return
+      editor.layout({ width: 100, height: contentHeight });
+      return;
     }
 
-    console.log(editor, contentHeight)
+    console.log(editor, contentHeight);
 
-    const targetHeight = Math.min(Math.max(contentHeight, 50), 370)
-    editor.layout({ width: 100, height: targetHeight })
+    const targetHeight = Math.min(Math.max(contentHeight, 50), 370);
+    editor.layout({ width: 100, height: targetHeight });
   }
 
   function setupResizeObserver(editor: editor.IStandaloneCodeEditor) {
-    const domNode = editor?.getDomNode()
-    if (!domNode) return
+    const domNode = editor?.getDomNode();
+    if (!domNode) return;
 
-    let timeoutId: number
+    let timeoutId: number;
     const resizeObserver = new ResizeObserver(() => {
-      clearTimeout(timeoutId)
+      clearTimeout(timeoutId);
       timeoutId = window.setTimeout(() => {
-        const container = domNode.parentElement
+        const container = domNode.parentElement;
         if (container) {
-          const containerRect = container.getBoundingClientRect()
-          const targetWidth = Math.max(containerRect.width - 10, 100)
-          const currentLayout = editor.getLayoutInfo()
-          editor.layout({ width: targetWidth, height: currentLayout.height })
+          const containerRect = container.getBoundingClientRect();
+          const targetWidth = Math.max(containerRect.width - 10, 100);
+          const currentLayout = editor.getLayoutInfo();
+          editor.layout({ width: targetWidth, height: currentLayout.height });
         }
-      }, 150)
-    })
+      }, 150);
+    });
 
-    const container = domNode.parentElement
+    const container = domNode.parentElement;
     if (container) {
-      resizeObserver.observe(container)
+      resizeObserver.observe(container);
     }
 
     editor.onDidDispose(() => {
-      clearTimeout(timeoutId)
-      resizeObserver.disconnect()
-    })
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    });
   }
 
   function setLineNumberOffset(offset: number) {
-    lineNumberBase = offset
+    lineNumberBase = offset;
     // Force Monaco to re-evaluate the lineNumbers callback after offset change
-    const ed = currentEditor.value
+    const ed = currentEditor.value;
     if (ed) {
       ed.updateOptions({
         lineNumbers: (lineNumber: number) => String(lineNumber + lineNumberBase)
-      })
+      });
     }
   }
 
@@ -115,5 +115,5 @@ export function useMonacoEditor() {
     layoutEditor,
     setupResizeObserver,
     setLineNumberOffset
-  }
+  };
 }

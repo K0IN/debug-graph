@@ -1,4 +1,4 @@
-import { editor } from 'monaco-editor'
+import { editor } from 'monaco-editor';
 
 /**
  * Theme handling that makes the webview match VS Code automatically.
@@ -19,22 +19,22 @@ import { editor } from 'monaco-editor'
  * defaults) and pick the right one based on the active theme kind.
  */
 
-const MONACO_THEME_NAME = 'vscode-synced'
+const MONACO_THEME_NAME = 'vscode-synced';
 
-type ThemeKind = 'vs' | 'vs-dark' | 'hc-black' | 'hc-light'
+type ThemeKind = 'vs' | 'vs-dark' | 'hc-black' | 'hc-light';
 
 function detectThemeKind(): ThemeKind {
-  const cls = document.body.classList
-  if (cls.contains('vscode-high-contrast-light')) return 'hc-light'
-  if (cls.contains('vscode-high-contrast')) return 'hc-black'
-  if (cls.contains('vscode-light')) return 'vs'
-  return 'vs-dark'
+  const cls = document.body.classList;
+  if (cls.contains('vscode-high-contrast-light')) return 'hc-light';
+  if (cls.contains('vscode-high-contrast')) return 'hc-black';
+  if (cls.contains('vscode-light')) return 'vs';
+  return 'vs-dark';
 }
 
 /** Read a `--vscode-*` CSS variable, returning undefined when unset/empty. */
 function cssVar(name: string): string | undefined {
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-  return value.length > 0 ? value : undefined
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value.length > 0 ? value : undefined;
 }
 
 /**
@@ -50,42 +50,42 @@ function cssVar(name: string): string | undefined {
  * We normalize by letting the browser resolve the color via canvas, which
  * always yields `rgb()`/`rgba()`, then format that as hex.
  */
-const colorNormalizationCanvas = document.createElement('canvas')
-colorNormalizationCanvas.width = 1
-colorNormalizationCanvas.height = 1
+const colorNormalizationCanvas = document.createElement('canvas');
+colorNormalizationCanvas.width = 1;
+colorNormalizationCanvas.height = 1;
 const colorNormalizationCtx = colorNormalizationCanvas.getContext('2d', {
   willReadFrequently: true
-})
+});
 
 function normalizeToHex(cssColor: string): string | undefined {
-  const ctx = colorNormalizationCtx
-  if (!ctx) return undefined
+  const ctx = colorNormalizationCtx;
+  if (!ctx) return undefined;
   try {
     // Reset to a known state, then let the browser parse the color. Invalid
     // colors leave the previous fillStyle, so set a sentinel first.
-    ctx.fillStyle = '#000000'
-    ctx.fillStyle = cssColor
+    ctx.fillStyle = '#000000';
+    ctx.fillStyle = cssColor;
     // After assignment, fillStyle is normalized to `#rrggbb` or
     // `rgba(r, g, b, a)` depending on transparency.
-    const resolved = ctx.fillStyle
+    const resolved = ctx.fillStyle;
     if (resolved.startsWith('#')) {
-      return resolved.toUpperCase()
+      return resolved.toUpperCase();
     }
-    const match = resolved.match(/rgba?\(([^)]+)\)/i)
-    if (!match) return undefined
-    const parts = match[1].split(',').map((p) => p.trim())
-    const [r, g, b] = parts.slice(0, 3).map((p) => Math.round(parseFloat(p)))
-    const a = parts.length >= 4 ? parseFloat(parts[3]) : 1
-    const toHex = (n: number) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')
+    const match = resolved.match(/rgba?\(([^)]+)\)/i);
+    if (!match) return undefined;
+    const parts = match[1].split(',').map((p) => p.trim());
+    const [r, g, b] = parts.slice(0, 3).map((p) => Math.round(parseFloat(p)));
+    const a = parts.length >= 4 ? parseFloat(parts[3]) : 1;
+    const toHex = (n: number) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0');
     const alphaHex =
       a >= 1
         ? ''
         : Math.round(a * 255)
             .toString(16)
-            .padStart(2, '0')
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}${alphaHex}`.toUpperCase()
+            .padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}${alphaHex}`.toUpperCase();
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
@@ -113,18 +113,18 @@ function readEditorColors(): editor.IStandaloneThemeData['colors'] {
     'scrollbarSlider.background': '--vscode-scrollbarSlider-background',
     'scrollbarSlider.hoverBackground': '--vscode-scrollbarSlider-hoverBackground',
     'scrollbarSlider.activeBackground': '--vscode-scrollbarSlider-activeBackground'
-  }
+  };
 
-  const colors: Record<string, string> = {}
+  const colors: Record<string, string> = {};
   for (const [monacoKey, varName] of Object.entries(mappings)) {
-    const value = cssVar(varName)
-    if (!value) continue
+    const value = cssVar(varName);
+    if (!value) continue;
     // Monaco's theme color parser is hex-only and falls back to RED on any
     // other format. VS Code CSS vars are frequently rgba(...), so normalize.
-    const hex = normalizeToHex(value)
-    if (hex) colors[monacoKey] = hex
+    const hex = normalizeToHex(value);
+    if (hex) colors[monacoKey] = hex;
   }
-  return colors
+  return colors;
 }
 
 /**
@@ -148,7 +148,7 @@ const DARK_TOKEN_RULES: editor.ITokenThemeRule[] = [
   { token: 'tag', foreground: '569CD6' },
   { token: 'attribute.name', foreground: '9CDCFE' },
   { token: 'attribute.value', foreground: 'CE9178' }
-]
+];
 
 const LIGHT_TOKEN_RULES: editor.ITokenThemeRule[] = [
   { token: 'comment', foreground: '008000', fontStyle: 'italic' },
@@ -167,21 +167,21 @@ const LIGHT_TOKEN_RULES: editor.ITokenThemeRule[] = [
   { token: 'tag', foreground: '800000' },
   { token: 'attribute.name', foreground: 'E50000' },
   { token: 'attribute.value', foreground: '0000FF' }
-]
+];
 
 function tokenRulesForKind(kind: ThemeKind): editor.ITokenThemeRule[] {
-  return kind === 'vs' || kind === 'hc-light' ? LIGHT_TOKEN_RULES : DARK_TOKEN_RULES
+  return kind === 'vs' || kind === 'hc-light' ? LIGHT_TOKEN_RULES : DARK_TOKEN_RULES;
 }
 
 /** Build a Monaco theme from the live VS Code webview environment. */
 export function buildMonacoTheme(): editor.IStandaloneThemeData {
-  const kind = detectThemeKind()
+  const kind = detectThemeKind();
   return {
     base: kind === 'hc-light' ? 'hc-black' : kind,
     inherit: true,
     rules: tokenRulesForKind(kind),
     colors: readEditorColors()
-  }
+  };
 }
 
 /**
@@ -190,10 +190,10 @@ export function buildMonacoTheme(): editor.IStandaloneThemeData {
  */
 export function applyVscodeTheme(monaco: typeof import('monaco-editor')): void {
   try {
-    monaco.editor.defineTheme(MONACO_THEME_NAME, buildMonacoTheme())
-    monaco.editor.setTheme(MONACO_THEME_NAME)
+    monaco.editor.defineTheme(MONACO_THEME_NAME, buildMonacoTheme());
+    monaco.editor.setTheme(MONACO_THEME_NAME);
   } catch (e) {
-    console.error('Failed to apply VS Code theme', e)
+    console.error('Failed to apply VS Code theme', e);
   }
 }
 
@@ -203,7 +203,7 @@ export function applyVscodeTheme(monaco: typeof import('monaco-editor')): void {
  * a reliable trigger. Returns a disposer.
  */
 export function watchVscodeThemeChanges(monaco: typeof import('monaco-editor')): () => void {
-  const observer = new MutationObserver(() => applyVscodeTheme(monaco))
-  observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] })
-  return () => observer.disconnect()
+  const observer = new MutationObserver(() => applyVscodeTheme(monaco));
+  observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
+  return () => observer.disconnect();
 }

@@ -10,6 +10,7 @@ export default withVueTs(
     vueTsConfigs.recommended,
     {
         rules: {
+            'semi': 'warn',
             '@typescript-eslint/no-unused-vars': ['error', {
                 argsIgnorePattern: '^_',
                 varsIgnorePattern: '^_',
